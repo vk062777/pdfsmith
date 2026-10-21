@@ -11,8 +11,10 @@ import android.view.ScaleGestureDetector
 import androidx.appcompat.widget.AppCompatImageView
 
 /**
- * An ImageView with smooth pinch-to-zoom, pan and double-tap zoom. It keeps the
- * image centred and clamps panning so the page can never be dragged off-screen.
+ * Pinch-zoom / pan image view used for PDF pages.
+ *
+ * [panEnabled] lets a drawing overlay sit on top: when it is false a single-finger
+ * drag no longer pans (so the overlay can draw) while two-finger pinch still zooms.
  */
 class ZoomableImageView @JvmOverloads constructor(
     context: Context,
@@ -26,8 +28,15 @@ class ZoomableImageView @JvmOverloads constructor(
     private val maxZoom = 8f
     private var tx = 0f
     private var ty = 0f
+    private var suppressReset = false
+
+    /** When false, single-finger drags are ignored (used while an overlay draws). */
+    var panEnabled = true
 
     var onZoomChanged: ((Boolean) -> Unit)? = null
+
+    /** Fires when a zoom gesture ends, with the resulting zoom factor. */
+    var onZoomSettled: ((Float) -> Unit)? = null
 
     init {
         scaleType = ScaleType.MATRIX
@@ -57,7 +66,7 @@ class ZoomableImageView @JvmOverloads constructor(
             override fun onDown(e: MotionEvent) = true
 
             override fun onScroll(e1: MotionEvent?, e2: MotionEvent, dx: Float, dy: Float): Boolean {
-                if (zoom <= 1f) return false
+                if (!panEnabled || zoom <= 1f) return false
                 tx -= dx
                 ty -= dy
                 apply()
@@ -74,6 +83,7 @@ class ZoomableImageView @JvmOverloads constructor(
                     apply()
                     notifyZoom()
                 }
+                onZoomSettled?.invoke(zoom)
                 return true
             }
         }
@@ -85,20 +95,38 @@ class ZoomableImageView @JvmOverloads constructor(
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> parent?.requestDisallowInterceptTouchEvent(zoom > 1f)
             MotionEvent.ACTION_POINTER_DOWN -> parent?.requestDisallowInterceptTouchEvent(true)
-            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL ->
+            MotionEvent.ACTION_POINTER_UP ->
+                if (event.pointerCount <= 2) onZoomSettled?.invoke(zoom)
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 parent?.requestDisallowInterceptTouchEvent(false)
+                onZoomSettled?.invoke(zoom)
+            }
         }
         return true
     }
 
     override fun setImageBitmap(bm: Bitmap?) {
         super.setImageBitmap(bm)
-        reset()
+        if (!suppressReset) reset()
     }
 
     override fun setImageDrawable(drawable: Drawable?) {
         super.setImageDrawable(drawable)
-        reset()
+        if (!suppressReset) reset()
+    }
+
+    /** Swap the bitmap in while keeping the current zoom and pan (used for hi-res re-render). */
+    fun setImageBitmapPreservingTransform(bm: Bitmap?) {
+        val z = zoom
+        val px = tx
+        val py = ty
+        suppressReset = true
+        super.setImageBitmap(bm)
+        suppressReset = false
+        zoom = z
+        tx = px
+        ty = py
+        apply()
     }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
@@ -115,6 +143,8 @@ class ZoomableImageView @JvmOverloads constructor(
     }
 
     fun isZoomed() = zoom > 1.05f
+
+    fun currentZoom() = zoom
 
     private fun notifyZoom() = onZoomChanged?.invoke(isZoomed())
 

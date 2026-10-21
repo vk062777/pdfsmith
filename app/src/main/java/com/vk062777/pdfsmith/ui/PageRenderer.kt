@@ -2,6 +2,7 @@ package com.vk062777.pdfsmith.ui
 
 import android.graphics.Bitmap
 import android.graphics.Color
+import android.graphics.Matrix
 import android.graphics.pdf.PdfRenderer
 
 /** Renders PDF pages to bitmaps using the platform renderer (fast, offline). */
@@ -10,7 +11,7 @@ class PageRenderer(private val renderer: PdfRenderer) {
     val pageCount: Int get() = renderer.pageCount
 
     @Synchronized
-    fun render(index: Int, targetWidth: Int): Bitmap {
+    fun render(index: Int, targetWidth: Int, rotation: Int = 0): Bitmap {
         val page = renderer.openPage(index)
         try {
             val ratio = page.height.toFloat() / page.width.toFloat()
@@ -19,7 +20,12 @@ class PageRenderer(private val renderer: PdfRenderer) {
             val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
             bmp.eraseColor(Color.WHITE)
             page.render(bmp, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-            return bmp
+            val deg = ((rotation % 360) + 360) % 360
+            if (deg == 0) return bmp
+            val m = Matrix().apply { postRotate(deg.toFloat()) }
+            val rotated = Bitmap.createBitmap(bmp, 0, 0, w, h, m, true)
+            if (rotated != bmp) bmp.recycle()
+            return rotated
         } finally {
             page.close()
         }

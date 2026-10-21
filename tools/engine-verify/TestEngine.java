@@ -202,9 +202,103 @@ public class TestEngine {
     List<PdfEngine.FormField> after = PdfEngine.listFormFields(filled);
     check("form value set", after.size() == 1 && "Ravi Kumar".equals(after.get(0).value));
 
+
+    System.out.println("== unlock variants ==");
+    File encOwner = new File(W, "encOwner.pdf");
+    PdfEngine.encrypt(a, "", "ownersecret", encOwner);
+    check("owner-only file is encrypted", PdfEngine.isEncrypted(encOwner));
+    check("owner-only needs no password", !PdfEngine.needsPassword(encOwner));
+    File decOwner = new File(W, "decOwner.pdf");
+    PdfEngine.decrypt(encOwner, "", decOwner);
+    check("owner-only unlock works", PdfEngine.pageCount(decOwner) == 3);
+    check("owner-only unlock removed protection", !PdfEngine.isEncrypted(decOwner));
+
+    File encUser = new File(W, "encUser.pdf");
+    PdfEngine.encrypt(a, "userpw", "ownerpw", encUser);
+    check("user-password file needs password", PdfEngine.needsPassword(encUser));
+    File decUser = new File(W, "decUser.pdf");
+    PdfEngine.decrypt(encUser, "userpw", decUser);
+    check("user-password unlock works", PdfEngine.pageCount(decUser) == 3);
+
+    System.out.println("== watermark options ==");
+    PdfEngine.WatermarkOptions wo = new PdfEngine.WatermarkOptions();
+    wo.text = "SAMPLE"; wo.randomPosition = true; wo.font = "Times"; wo.bold = true;
+    wo.color = 0xFF008000; wo.opacity = 0.3f; wo.angle = 0f; wo.fontSize = 36f;
+    File wm2 = new File(W, "wm2.pdf");
+    PdfEngine.watermarkText(a, wo, wm2);
+    check("watermark(random, Times) valid", PdfEngine.pageCount(wm2) == 3);
+    boolean every = true;
+    for (int i = 1; i <= 3; i++) if (!textOf(wm2, i).replaceAll("\\s+","").contains("SAMPLE")) every = false;
+    check("watermark(random) on every page", every);
+    PdfEngine.WatermarkOptions wo2 = new PdfEngine.WatermarkOptions();
+    wo2.text = "COURIER"; wo2.font = "Courier"; wo2.italic = true; wo2.bold = false; wo2.angle = 0f;
+    File wm3 = new File(W, "wm3.pdf");
+    PdfEngine.watermarkText(a, wo2, wm3);
+    check("watermark(courier italic) valid", PdfEngine.pageCount(wm3) == 3);
+    check("watermark(courier) present", textOf(wm3, 1).replaceAll("\\s+","").contains("COURIER"));
+
+    System.out.println("== multi-image pdf ==");
+    File m1 = new File(W, "mi1.jpg"), m2 = new File(W, "mi2.png"), m3 = new File(W, "mi3.jpg");
+    if (!m1.exists()) { writeImg(m1, 1600, 1200, "jpg"); writeImg(m2, 900, 1400, "png"); writeImg(m3, 2000, 1500, "jpg"); }
+    File mipdf = new File(W, "mipdf.pdf");
+    PdfEngine.imagesToPdf(Arrays.asList(m1, m2, m3), mipdf);
+    check("multi-image pages=3", PdfEngine.pageCount(mipdf) == 3);
+    check("multi-image has 3 embedded images", countImages(mipdf) >= 3);
+
+    System.out.println("== strong compress ==");
+    File scanDir = new File(W, "scan"); scanDir.mkdirs();
+    List<File> scans = new ArrayList<>();
+    for (int i = 0; i < 6; i++) {
+      File sf = new File(scanDir, "scan" + i + ".jpg");
+      if (!sf.exists()) writePhoto(sf, 3000, 2250, i);
+      scans.add(sf);
+    }
+    File bigScan = new File(W, "bigScan.pdf");
+    PdfEngine.imagesToPdf(scans, bigScan, 0, true);
+    File smallScan = new File(W, "smallScan.pdf");
+    PdfEngine.compress(bigScan, smallScan, 2);
+    check("strong compress valid", PdfEngine.pageCount(smallScan) == 6);
+    double ratio = smallScan.length() / (double) bigScan.length();
+    System.out.println("     scan " + bigScan.length() + " -> " + smallScan.length() + " (" + Math.round(ratio * 100) + "%)");
+    check("strong compress >50% smaller", ratio < 0.5);
+
     System.out.println();
     System.out.println("TOTAL: " + pass + " passed, " + fail + " failed");
     if (fail > 0) System.exit(1);
+  }
+
+  static void writeImg(File f, int w, int h, String fmt) throws Exception {
+    java.awt.image.BufferedImage bi = new java.awt.image.BufferedImage(w, h, java.awt.image.BufferedImage.TYPE_INT_RGB);
+    java.awt.Graphics2D g = bi.createGraphics();
+    for (int y = 0; y < h; y += 12) { g.setColor(new java.awt.Color((y*5)%255,(y*9)%255,(y*13)%255)); g.fillRect(0, y, w, 12); }
+    g.dispose();
+    javax.imageio.ImageIO.write(bi, fmt, f);
+  }
+
+  static void writePhoto(File f, int w, int h, int seed) throws Exception {
+    java.awt.image.BufferedImage bi = new java.awt.image.BufferedImage(w, h, java.awt.image.BufferedImage.TYPE_INT_RGB);
+    java.util.Random rnd = new java.util.Random(seed);
+    for (int y = 0; y < h; y++) for (int x = 0; x < w; x++) {
+      int r = (int)((Math.sin((x+seed*31)/37.0)*0.5+0.5)*200) + rnd.nextInt(40);
+      int gg = (int)((Math.cos((y+seed*17)/29.0)*0.5+0.5)*200) + rnd.nextInt(40);
+      int b = (int)((Math.sin((x+y)/23.0)*0.5+0.5)*200) + rnd.nextInt(40);
+      bi.setRGB(x, y, (Math.min(255,r)<<16)|(Math.min(255,gg)<<8)|Math.min(255,b));
+    }
+    javax.imageio.ImageIO.write(bi, "jpg", f);
+  }
+
+  static int countImages(File f) throws Exception {
+    int n = 0;
+    try (PDDocument d = PDDocument.load(f)) {
+      for (PDPage p : d.getPages()) {
+        PDResources res = p.getResources();
+        if (res == null) continue;
+        for (com.tom_roush.pdfbox.cos.COSName nm : res.getXObjectNames()) {
+          if (res.getXObject(nm) instanceof com.tom_roush.pdfbox.pdmodel.graphics.image.PDImageXObject) n++;
+        }
+      }
+    }
+    return n;
   }
 
   static File makeForm() throws Exception {

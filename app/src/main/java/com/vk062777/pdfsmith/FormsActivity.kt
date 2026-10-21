@@ -54,7 +54,7 @@ class FormsActivity : PdfActivity() {
             binding.btnSave.isEnabled = true
         }) {
             val f = Files.copyToCache(this, uri)
-            if (PdfEngine.isEncrypted(f)) error(getString(R.string.msg_encrypted))
+            if (PdfEngine.needsPassword(f)) error(getString(R.string.msg_needs_password))
             source = f
             PdfEngine.listFormFields(f)
         }

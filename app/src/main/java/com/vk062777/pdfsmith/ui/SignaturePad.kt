@@ -10,7 +10,7 @@ import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
 
-/** A simple signature pad: draw with a finger, then export the strokes as a bitmap. */
+/** A signature pad: draw with a finger, choose the ink colour, export as a bitmap. */
 class SignaturePad @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
 ) : View(context, attrs, defStyleAttr) {
@@ -27,6 +27,11 @@ class SignaturePad @JvmOverloads constructor(
     private var lastY = 0f
     private var hasInk = false
 
+    fun setInkColor(color: Int) {
+        paint.color = color
+        invalidate()
+    }
+
     fun clear() {
         path.reset()
         hasInk = false
@@ -36,7 +41,9 @@ class SignaturePad @JvmOverloads constructor(
     fun isEmpty() = !hasInk
 
     fun toBitmap(): Bitmap {
-        val bmp = Bitmap.createBitmap(width.coerceAtLeast(1), height.coerceAtLeast(1), Bitmap.Config.ARGB_8888)
+        val bmp = Bitmap.createBitmap(
+            width.coerceAtLeast(1), height.coerceAtLeast(1), Bitmap.Config.ARGB_8888
+        )
         val canvas = Canvas(bmp)
         canvas.drawColor(Color.TRANSPARENT)
         canvas.drawPath(path, paint)

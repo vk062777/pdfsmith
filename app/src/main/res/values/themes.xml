@@ -10,20 +10,15 @@
         <item name="colorSecondaryContainer">@color/brand_secondary_container</item>
         <item name="android:colorBackground">@color/app_background</item>
         <item name="colorSurface">@color/surface</item>
+        <item name="colorOnSurface">@color/text_primary</item>
         <item name="android:statusBarColor">@color/brand_primary_dark</item>
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:navigationBarColor">@color/surface</item>
     </style>
 
     <style name="Theme.PDFsmith.Viewer" parent="Theme.PDFsmith">
-        <item name="android:statusBarColor">@color/text_primary</item>
+        <item name="android:statusBarColor">@color/brand_primary_dark</item>
         <item name="android:windowLightStatusBar">false</item>
-    </style>
-
-    <style name="Widget.PDFsmith.Toolbar" parent="Widget.Material3.Toolbar">
-        <item name="android:background">?attr/colorPrimary</item>
-        <item name="titleTextColor">@color/white</item>
-        <item name="subtitleTextColor">#CCFFFFFF</item>
     </style>
 
     <style name="TextAppearance.PDFsmith.SectionHeader" parent="TextAppearance.Material3.TitleMedium">

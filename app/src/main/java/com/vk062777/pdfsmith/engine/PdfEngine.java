@@ -1,7 +1,9 @@
 package com.vk062777.pdfsmith.engine;
 
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 
+import com.tom_roush.pdfbox.cos.COSBase;
 import com.tom_roush.pdfbox.cos.COSName;
 import com.tom_roush.pdfbox.io.MemoryUsageSetting;
 import com.tom_roush.pdfbox.multipdf.PDFMergerUtility;
@@ -15,6 +17,8 @@ import com.tom_roush.pdfbox.pdmodel.common.PDRectangle;
 import com.tom_roush.pdfbox.pdmodel.encryption.AccessPermission;
 import com.tom_roush.pdfbox.pdmodel.encryption.StandardProtectionPolicy;
 import com.tom_roush.pdfbox.pdmodel.font.PDType1Font;
+import com.tom_roush.pdfbox.pdmodel.graphics.PDXObject;
+import com.tom_roush.pdfbox.pdmodel.graphics.form.PDFormXObject;
 import com.tom_roush.pdfbox.pdmodel.graphics.image.JPEGFactory;
 import com.tom_roush.pdfbox.pdmodel.graphics.image.LosslessFactory;
 import com.tom_roush.pdfbox.pdmodel.graphics.image.PDImageXObject;
@@ -38,29 +42,28 @@ import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 
 /**
- * PdfEngine — the offline document-processing core of PDFsmith.
+ * NovaPDF — the offline document-processing core.
  *
- * <p>Every method here is a pure file-in / file-out operation built on the Apache
- * PDFBox port for Android. It contains no UI code and no network code: the whole
- * engine is fully offline and deterministic, which is what lets it be unit-tested
- * on the JVM as well as on-device.</p>
+ * <p>Every method is a pure file-in / file-out operation built on the Apache PDFBox
+ * port for Android. No UI, no network: the whole engine is offline and deterministic,
+ * which is what lets it be unit-tested on the JVM as well as on-device.</p>
  */
 public final class PdfEngine {
 
     private PdfEngine() { }
 
     // ---------------------------------------------------------------------
-    // Small value types used by the annotation batch API
+    // Small value types
     // ---------------------------------------------------------------------
 
     public static final class TextStamp {
-        public int page;          // 1-based
-        public float x, y;        // PDF user-space points, origin bottom-left
-        public float size;        // font size in points
-        public int color;         // ARGB
+        public int page;
+        public float x, y, size;
+        public int color;
         public String text;
         public TextStamp(int page, float x, float y, float size, int color, String text) {
             this.page = page; this.x = x; this.y = y; this.size = size; this.color = color; this.text = text;
@@ -68,8 +71,8 @@ public final class PdfEngine {
     }
 
     public static final class ImageStamp {
-        public int page;          // 1-based
-        public float x, y, w, h;  // destination rectangle in PDF points
+        public int page;
+        public float x, y, w, h;
         public File image;
         public ImageStamp(int page, float x, float y, float w, float h, File image) {
             this.page = page; this.x = x; this.y = y; this.w = w; this.h = h; this.image = image;
@@ -77,9 +80,9 @@ public final class PdfEngine {
     }
 
     public static final class HighlightStamp {
-        public int page;          // 1-based
+        public int page;
         public float x, y, w, h;
-        public int color;         // ARGB
+        public int color;
         public HighlightStamp(int page, float x, float y, float w, float h, int color) {
             this.page = page; this.x = x; this.y = y; this.w = w; this.h = h; this.color = color;
         }
@@ -91,6 +94,22 @@ public final class PdfEngine {
         public String value;
         public List<String> options = new ArrayList<>();
         public boolean readOnly;
+    }
+
+    /** Options for {@link #watermarkText}. */
+    public static final class WatermarkOptions {
+        public String text = "CONFIDENTIAL";
+        /** 0 = choose automatically from the page size. */
+        public float fontSize = 0f;
+        public float opacity = 0.25f;
+        public int color = 0xFFFF0000;
+        public float angle = 45f;
+        /** Helvetica | Times | Courier */
+        public String font = "Helvetica";
+        public boolean bold = true;
+        public boolean italic = false;
+        /** Place each page's mark at a different random spot. */
+        public boolean randomPosition = false;
     }
 
     // ---------------------------------------------------------------------
@@ -106,11 +125,20 @@ public final class PdfEngine {
         return PDDocument.load(f, password);
     }
 
+    /** True if the file is encrypted at all (even if it opens without a password). */
     public static boolean isEncrypted(File f) {
         try (PDDocument d = PDDocument.load(f)) {
             return d.isEncrypted();
         } catch (Exception e) {
-            // An encrypted file we cannot open without a password lands here too.
+            return true;
+        }
+    }
+
+    /** True only when the file cannot be opened without a password. */
+    public static boolean needsPassword(File f) {
+        try (PDDocument d = PDDocument.load(f)) {
+            return false;
+        } catch (Exception e) {
             return true;
         }
     }
@@ -158,7 +186,6 @@ public final class PdfEngine {
     // Page organisation
     // ---------------------------------------------------------------------
 
-    /** Keep only the given 1-based pages, in the given order. */
     public static void keepPages(File src, List<Integer> pages1based, File out) throws Exception {
         try (PDDocument in = open(src); PDDocument outDoc = new PDDocument()) {
             int total = in.getNumberOfPages();
@@ -170,7 +197,6 @@ public final class PdfEngine {
         }
     }
 
-    /** Remove the given 1-based pages. */
     public static void removePages(File src, List<Integer> pages1based, File out) throws Exception {
         try (PDDocument in = open(src)) {
             int total = in.getNumberOfPages();
@@ -182,7 +208,6 @@ public final class PdfEngine {
         }
     }
 
-    /** Reorder pages: order is a full permutation of 1..n. */
     public static void reorderPages(File src, List<Integer> order1based, File out) throws Exception {
         try (PDDocument in = open(src)) {
             int total = in.getNumberOfPages();
@@ -191,7 +216,6 @@ public final class PdfEngine {
         }
     }
 
-    /** Rotate the given pages (or all if pages is null/empty) by degrees (multiples of 90). */
     public static void rotatePages(File src, List<Integer> pages1based, int degrees, File out) throws Exception {
         int d = ((degrees % 360) + 360) % 360;
         try (PDDocument in = open(src)) {
@@ -222,10 +246,6 @@ public final class PdfEngine {
         }
     }
 
-    /**
-     * Split a document into several files, one per inclusive 1-based range.
-     * Returns the created files in order.
-     */
     public static List<File> splitToFiles(File src, List<int[]> ranges1based, File outDir, String baseName) throws Exception {
         List<File> created = new ArrayList<>();
         try (PDDocument in = open(src)) {
@@ -235,11 +255,9 @@ public final class PdfEngine {
                 int from = Math.max(1, Math.min(r[0], r[1]));
                 int to = Math.min(total, Math.max(r[0], r[1]));
                 if (from > to) continue;
-                List<Integer> pages = new ArrayList<>();
-                for (int i = from; i <= to; i++) pages.add(i);
                 File dest = new File(outDir, baseName + "_part" + (idx++) + ".pdf");
                 try (PDDocument part = new PDDocument()) {
-                    for (int p : pages) part.importPage(in.getPage(p - 1));
+                    for (int i = from; i <= to; i++) part.importPage(in.getPage(i - 1));
                     part.save(dest);
                 }
                 created.add(dest);
@@ -249,7 +267,7 @@ public final class PdfEngine {
     }
 
     // ---------------------------------------------------------------------
-    // Content editing: text and images (flattened into page content)
+    // Content editing
     // ---------------------------------------------------------------------
 
     public static void addText(File src, int page1based, String text, float x, float y,
@@ -282,7 +300,6 @@ public final class PdfEngine {
         }
     }
 
-    /** Apply a batch of text/image/highlight stamps in a single save. */
     public static void applyStamps(File src, List<TextStamp> texts, List<ImageStamp> images,
                                    List<HighlightStamp> highlights, File out) throws Exception {
         try (PDDocument d = open(src)) {
@@ -331,32 +348,55 @@ public final class PdfEngine {
     // Watermarks
     // ---------------------------------------------------------------------
 
-    public static void watermarkText(File src, String text, float fontSize, float opacity,
-                                     int argbColor, float angleDeg, File out) throws Exception {
+    public static void watermarkText(File src, WatermarkOptions o, File out) throws Exception {
         try (PDDocument d = open(src)) {
             int total = d.getNumberOfPages();
-            String safe = winAnsi(text);
+            String safe = winAnsi(o.text);
             for (int i = 0; i < total; i++) {
                 PDPage page = d.getPage(i);
                 PDRectangle box = page.getCropBox();
-                float size = fontSize > 0 ? fontSize : Math.max(24f, Math.min(box.getWidth(), box.getHeight()) / 6f);
-                float w = PDType1Font.HELVETICA.getStringWidth(safe) / 1000f * size;
-                float cx = box.getLowerLeftX() + (box.getWidth() - w) / 2f;
-                float cy = box.getLowerLeftY() + box.getHeight() / 2f;
+                float size = o.fontSize > 0 ? o.fontSize
+                        : Math.max(20f, Math.min(box.getWidth(), box.getHeight()) / 8f);
+                PDType1Font font = pickFont(o.font, o.bold, o.italic);
+                float w = font.getStringWidth(safe) / 1000f * size;
+                float h = size;
+
+                float x, y;
+                if (o.randomPosition) {
+                    Random rnd = new Random((i + 1) * 7919L + safe.hashCode());
+                    float availW = Math.max(0f, box.getWidth() - w - 24f);
+                    float availH = Math.max(0f, box.getHeight() - h - 24f);
+                    x = box.getLowerLeftX() + 12f + (availW > 0 ? rnd.nextFloat() * availW : 0f);
+                    y = box.getLowerLeftY() + 12f + (availH > 0 ? rnd.nextFloat() * availH : 0f);
+                } else {
+                    x = box.getLowerLeftX() + (box.getWidth() - w) / 2f;
+                    y = box.getLowerLeftY() + (box.getHeight() - h) / 2f;
+                }
+
                 try (PDPageContentStream cs = new PDPageContentStream(d, page, AppendMode.APPEND, true, true)) {
                     PDExtendedGraphicsState gs = new PDExtendedGraphicsState();
-                    gs.setNonStrokingAlphaConstant(opacity);
+                    gs.setNonStrokingAlphaConstant(Math.max(0.05f, Math.min(1f, o.opacity)));
                     cs.setGraphicsStateParameters(gs);
-                    cs.setNonStrokingColor((argbColor >> 16) & 0xFF, (argbColor >> 8) & 0xFF, argbColor & 0xFF);
+                    cs.setNonStrokingColor((o.color >> 16) & 0xFF, (o.color >> 8) & 0xFF, o.color & 0xFF);
                     cs.beginText();
-                    cs.setFont(PDType1Font.HELVETICA_BOLD, size);
-                    cs.setTextMatrix(Matrix.getRotateInstance(Math.toRadians(angleDeg), cx, cy));
+                    cs.setFont(font, size);
+                    if (o.angle != 0f) cs.setTextMatrix(Matrix.getRotateInstance(Math.toRadians(o.angle), x, y));
+                    else cs.newLineAtOffset(x, y);
                     cs.showText(safe);
                     cs.endText();
                 }
             }
             d.save(out);
         }
+    }
+
+    /** Kept for convenience; centres a red diagonal text mark on every page. */
+    public static void watermarkText(File src, String text, float fontSize, float opacity,
+                                     int argbColor, float angleDeg, File out) throws Exception {
+        WatermarkOptions o = new WatermarkOptions();
+        o.text = text; o.fontSize = fontSize; o.opacity = opacity;
+        o.color = argbColor; o.angle = angleDeg;
+        watermarkText(src, o, out);
     }
 
     public static void watermarkImage(File src, File image, float opacity, float scale, File out) throws Exception {
@@ -430,60 +470,96 @@ public final class PdfEngine {
         }
     }
 
+    /**
+     * Remove protection. Works for files that open without a password (owner-only
+     * protection) and for files whose user password is supplied.
+     */
     public static void decrypt(File src, String password, File out) throws Exception {
         try (PDDocument d = open(src, password)) {
-            if (d.isEncrypted()) d.setAllSecurityToBeRemoved(true);
+            d.setAllSecurityToBeRemoved(true);
             d.save(out);
         }
     }
 
     // ---------------------------------------------------------------------
-    // Compression (genuine: image downsampling + JPEG re-encode + metadata strip)
+    // Compression
     // ---------------------------------------------------------------------
 
-    public static void compress(File src, File out) throws Exception {
-        compress(src, out, 1600, 0.65f);
+    /** level: 0 = light, 1 = balanced, 2 = strong. */
+    public static void compress(File src, File out, int level) throws Exception {
+        int maxDim;
+        float quality;
+        switch (level) {
+            case 0: maxDim = 2200; quality = 0.78f; break;
+            case 2: maxDim = 1200; quality = 0.48f; break;
+            default: maxDim = 1600; quality = 0.62f; break;
+        }
+        compress(src, out, maxDim, quality);
     }
 
-    /**
-     * @param maxDimension largest edge an embedded raster image may keep (0 = keep size)
-     * @param jpegQuality 0..1 quality for re-encoded photos
-     */
+    public static void compress(File src, File out) throws Exception {
+        compress(src, out, 1600, 0.62f);
+    }
+
     public static void compress(File src, File out, int maxDimension, float jpegQuality) throws Exception {
         try (PDDocument d = open(src)) {
-            IdentityHashMap<com.tom_roush.pdfbox.cos.COSBase, Boolean> seen = new IdentityHashMap<>();
+            IdentityHashMap<COSBase, Boolean> seenImages = new IdentityHashMap<>();
+            IdentityHashMap<COSBase, Boolean> seenResources = new IdentityHashMap<>();
             for (PDPage page : d.getPages()) {
+                // embedded page thumbnails are pure dead weight
+                page.getCOSObject().removeItem(COSName.THUMB);
                 PDResources res = page.getResources();
-                if (res == null) continue;
-                for (COSName name : res.getXObjectNames()) {
-                    com.tom_roush.pdfbox.pdmodel.graphics.PDXObject xo;
-                    try { xo = res.getXObject(name); } catch (Exception e) { continue; }
-                    if (!(xo instanceof PDImageXObject)) continue;
-                    PDImageXObject img = (PDImageXObject) xo;
-                    if (seen.put(img.getCOSObject(), Boolean.TRUE) != null) continue;
-                    try {
-                        Bitmap bmp = img.getImage();
-                        if (bmp == null) continue;
-                        boolean hasAlpha = bmp.hasAlpha();
-                        int w = bmp.getWidth(), h = bmp.getHeight();
-                        if (maxDimension > 0 && Math.max(w, h) > maxDimension) {
-                            float s = maxDimension / (float) Math.max(w, h);
-                            Bitmap scaled = Bitmap.createScaledBitmap(bmp, Math.max(1, Math.round(w * s)),
-                                    Math.max(1, Math.round(h * s)), true);
-                            bmp = scaled;
-                        }
-                        PDImageXObject replacement = hasAlpha
-                                ? LosslessFactory.createFromImage(d, bmp)
-                                : JPEGFactory.createFromImage(d, bmp, jpegQuality);
-                        res.put(name, replacement);
-                    } catch (Throwable ignore) {
-                        // Leave the original image untouched if it cannot be re-encoded.
-                    }
-                }
+                if (res != null) compressResources(d, res, seenImages, seenResources, maxDimension, jpegQuality);
             }
+            // strip identifying metadata (small but free)
             PDDocumentInformation info = d.getDocumentInformation();
             info.setTitle(null);
+            info.setSubject(null);
+            info.setKeywords(null);
             d.save(out);
+        }
+    }
+
+    private static void compressResources(PDDocument d, PDResources res,
+                                          IdentityHashMap<COSBase, Boolean> seenImages,
+                                          IdentityHashMap<COSBase, Boolean> seenResources,
+                                          int maxDimension, float jpegQuality) {
+        if (res == null) return;
+        if (seenResources.put(res.getCOSObject(), Boolean.TRUE) != null) return;
+        List<COSName> names = new ArrayList<>();
+        for (COSName n : res.getXObjectNames()) names.add(n);
+        for (COSName name : names) {
+            PDXObject xo;
+            try { xo = res.getXObject(name); } catch (Exception e) { continue; }
+            if (xo instanceof PDFormXObject) {
+                try { compressResources(d, ((PDFormXObject) xo).getResources(), seenImages, seenResources, maxDimension, jpegQuality); }
+                catch (Exception ignore) { }
+            } else if (xo instanceof PDImageXObject) {
+                PDImageXObject img = (PDImageXObject) xo;
+                if (seenImages.put(img.getCOSObject(), Boolean.TRUE) != null) continue;
+                try {
+                    Bitmap original = img.getImage();
+                    if (original == null) continue;
+                    boolean hasAlpha = original.hasAlpha();
+                    int w = original.getWidth(), h = original.getHeight();
+                    Bitmap scaled = null;
+                    Bitmap toEncode = original;
+                    if (maxDimension > 0 && Math.max(w, h) > maxDimension) {
+                        float s = maxDimension / (float) Math.max(w, h);
+                        scaled = Bitmap.createScaledBitmap(original, Math.max(1, Math.round(w * s)),
+                                Math.max(1, Math.round(h * s)), true);
+                        toEncode = scaled;
+                    }
+                    PDImageXObject replacement = hasAlpha
+                            ? LosslessFactory.createFromImage(d, toEncode)
+                            : JPEGFactory.createFromImage(d, toEncode, jpegQuality);
+                    res.put(name, replacement);
+                    if (scaled != null) scaled.recycle();
+                    original.recycle();
+                } catch (Throwable ignore) {
+                    // leave the original image untouched
+                }
+            }
         }
     }
 
@@ -593,43 +669,95 @@ public final class PdfEngine {
     // Images <-> PDF
     // ---------------------------------------------------------------------
 
+    /** One page per image, page sized to the image. Images are down-scaled to a sane bound. */
     public static void imagesToPdf(List<File> images, File out) throws Exception {
+        imagesToPdf(images, out, 3000, false);
+    }
+
+    /**
+     * @param maxDimension longest edge kept when decoding (0 = full size)
+     * @param fitToA4    fit each image inside an A4 page instead of sizing the page to it
+     */
+    public static void imagesToPdf(List<File> images, File out, int maxDimension, boolean fitToA4) throws Exception {
         if (images == null || images.isEmpty()) throw new IllegalArgumentException("Pick at least one image");
         try (PDDocument d = new PDDocument()) {
             for (File image : images) {
-                PDImageXObject img = PDImageXObject.createFromFile(image.getAbsolutePath(), d);
-                PDPage page = new PDPage(new PDRectangle(img.getWidth(), img.getHeight()));
+                Bitmap bmp = decodeBounded(image, maxDimension);
+                if (bmp == null) throw new IllegalArgumentException("Could not read image: " + image.getName());
+                PDImageXObject img = bmp.hasAlpha()
+                        ? LosslessFactory.createFromImage(d, bmp)
+                        : JPEGFactory.createFromImage(d, bmp, 0.85f);
+
+                PDRectangle pageSize;
+                if (fitToA4) {
+                    pageSize = PDRectangle.A4;
+                } else {
+                    float pw = Math.max(1f, bmp.getWidth());
+                    float ph = Math.max(1f, bmp.getHeight());
+                    // keep pages to a sensible size (max 2000pt on the long edge)
+                    float longest = Math.max(pw, ph);
+                    if (longest > 2000f) { float s = 2000f / longest; pw *= s; ph *= s; }
+                    pageSize = new PDRectangle(pw, ph);
+                }
+                bmp.recycle();
+
+                PDPage page = new PDPage(pageSize);
                 d.addPage(page);
-                try (PDPageContentStream cs = new PDPageContentStream(d, page)) {
-                    cs.drawImage(img, 0, 0, img.getWidth(), img.getHeight());
+                float iw = img.getWidth(), ih = img.getHeight();
+                float scale = Math.min(pageSize.getWidth() / iw, pageSize.getHeight() / ih);
+                if (fitToA4) {
+                    float dw = iw * scale, dh = ih * scale;
+                    try (PDPageContentStream cs = new PDPageContentStream(d, page)) {
+                        cs.drawImage(img, (pageSize.getWidth() - dw) / 2f, (pageSize.getHeight() - dh) / 2f, dw, dh);
+                    }
+                } else {
+                    try (PDPageContentStream cs = new PDPageContentStream(d, page)) {
+                        cs.drawImage(img, 0, 0, pageSize.getWidth(), pageSize.getHeight());
+                    }
                 }
             }
             d.save(out);
         }
     }
 
-    /** Extract embedded raster images. Returns the list of files written. */
+    private static Bitmap decodeBounded(File f, int maxDimension) {
+        BitmapFactory.Options bounds = new BitmapFactory.Options();
+        bounds.inJustDecodeBounds = true;
+        BitmapFactory.decodeFile(f.getAbsolutePath(), bounds);
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null;
+        int sample = 1;
+        if (maxDimension > 0) {
+            while (Math.max(bounds.outWidth, bounds.outHeight) / (sample * 2) >= maxDimension) sample *= 2;
+        }
+        BitmapFactory.Options opts = new BitmapFactory.Options();
+        opts.inSampleSize = sample;
+        Bitmap bmp = BitmapFactory.decodeFile(f.getAbsolutePath(), opts);
+        if (bmp == null) return null;
+        return bmp;
+    }
+
     public static List<File> extractImages(File src, File outDir) throws Exception {
         List<File> written = new ArrayList<>();
         try (PDDocument d = open(src)) {
-            IdentityHashMap<com.tom_roush.pdfbox.cos.COSBase, Boolean> seen = new IdentityHashMap<>();
+            IdentityHashMap<COSBase, Boolean> seen = new IdentityHashMap<>();
             int n = 0;
             for (PDPage page : d.getPages()) {
                 PDResources res = page.getResources();
                 if (res == null) continue;
                 for (COSName name : res.getXObjectNames()) {
-                    com.tom_roush.pdfbox.pdmodel.graphics.PDXObject xo;
+                    PDXObject xo;
                     try { xo = res.getXObject(name); } catch (Exception e) { continue; }
                     if (!(xo instanceof PDImageXObject)) continue;
                     PDImageXObject img = (PDImageXObject) xo;
                     if (seen.put(img.getCOSObject(), Boolean.TRUE) != null) continue;
                     Bitmap bmp = img.getImage();
                     if (bmp == null) continue;
-                    String ext = bmp.hasAlpha() ? "png" : "jpg";
-                    File dest = new File(outDir, "image_" + (++n) + "." + ext);
+                    boolean alpha = bmp.hasAlpha();
+                    File dest = new File(outDir, "image_" + (++n) + (alpha ? ".png" : ".jpg"));
                     try (OutputStream os = new FileOutputStream(dest)) {
-                        bmp.compress(bmp.hasAlpha() ? Bitmap.CompressFormat.PNG : Bitmap.CompressFormat.JPEG, 90, os);
+                        bmp.compress(alpha ? Bitmap.CompressFormat.PNG : Bitmap.CompressFormat.JPEG, 90, os);
                     }
+                    bmp.recycle();
                     written.add(dest);
                 }
             }
@@ -640,6 +768,26 @@ public final class PdfEngine {
     // ---------------------------------------------------------------------
     // helpers
     // ---------------------------------------------------------------------
+
+    private static PDType1Font pickFont(String name, boolean bold, boolean italic) {
+        String n = name == null ? "Helvetica" : name;
+        if ("Times".equalsIgnoreCase(n)) {
+            return bold && italic ? PDType1Font.TIMES_BOLD_ITALIC
+                    : bold ? PDType1Font.TIMES_BOLD
+                    : italic ? PDType1Font.TIMES_ITALIC
+                    : PDType1Font.TIMES_ROMAN;
+        }
+        if ("Courier".equalsIgnoreCase(n)) {
+            return bold && italic ? PDType1Font.COURIER_BOLD_OBLIQUE
+                    : bold ? PDType1Font.COURIER_BOLD
+                    : italic ? PDType1Font.COURIER_OBLIQUE
+                    : PDType1Font.COURIER;
+        }
+        return bold && italic ? PDType1Font.HELVETICA_BOLD_OBLIQUE
+                : bold ? PDType1Font.HELVETICA_BOLD
+                : italic ? PDType1Font.HELVETICA_OBLIQUE
+                : PDType1Font.HELVETICA;
+    }
 
     /** Restrict a string to characters the standard-14 fonts can encode (WinAnsi-ish). */
     static String winAnsi(String s) {

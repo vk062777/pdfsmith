@@ -21,7 +21,7 @@
             android:id="@+id/thumb"
             android:layout_width="match_parent"
             android:layout_height="150dp"
-            android:background="#FFF0F1F5"
+            android:background="@color/surface_variant"
             android:contentDescription="@string/tool_pages"
             android:padding="6dp"
             android:scaleType="fitCenter" />

@@ -1,12 +1,13 @@
 package com.vk062777.pdfsmith
 
+import android.graphics.pdf.PdfRenderer
 import android.net.Uri
 import android.os.Bundle
 import android.os.ParcelFileDescriptor
-import android.view.View
-import android.graphics.pdf.PdfRenderer
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.ItemTouchHelper
+import androidx.recyclerview.widget.RecyclerView
 import com.vk062777.pdfsmith.databinding.ActivityPagesBinding
 import com.vk062777.pdfsmith.engine.PdfEngine
 import com.vk062777.pdfsmith.model.PageEntry
@@ -14,8 +15,9 @@ import com.vk062777.pdfsmith.ui.PageRenderer
 import com.vk062777.pdfsmith.ui.PageThumbAdapter
 import com.vk062777.pdfsmith.util.Files
 import java.io.File
+import java.util.Collections
 
-/** Visual page organiser: rotate, reorder, delete and extract pages. */
+/** Visual page organiser: drag to reorder, plus rotate, delete and extract. */
 class PagesActivity : PdfActivity() {
 
     private lateinit var binding: ActivityPagesBinding
@@ -40,14 +42,47 @@ class PagesActivity : PdfActivity() {
 
         binding.btnRotate.setOnClickListener { rotateSelected() }
         binding.btnDelete.setOnClickListener { deleteSelected() }
-        binding.btnLeft.setOnClickListener { moveSelected(-1) }
-        binding.btnRight.setOnClickListener { moveSelected(1) }
         binding.btnSelectAll.setOnClickListener { toggleSelectAll() }
         binding.btnUndo.setOnClickListener { undo() }
         binding.btnSave.setOnClickListener { save() }
         binding.btnExtract.setOnClickListener { extract() }
 
+        attachDragToReorder()
         pickPdf()
+    }
+
+    private fun attachDragToReorder() {
+        val callback = object : ItemTouchHelper.SimpleCallback(
+            ItemTouchHelper.UP or ItemTouchHelper.DOWN or ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT, 0
+        ) {
+            override fun onMove(
+                rv: RecyclerView, vh: RecyclerView.ViewHolder, target: RecyclerView.ViewHolder
+            ): Boolean {
+                val from = vh.bindingAdapterPosition
+                val to = target.bindingAdapterPosition
+                if (from == RecyclerView.NO_POSITION || to == RecyclerView.NO_POSITION) return false
+                if (from == to) return true
+                Collections.swap(items, from, to)
+                adapter?.notifyItemMoved(from, to)
+                return true
+            }
+
+            override fun onSwiped(vh: RecyclerView.ViewHolder, direction: Int) { }
+
+            override fun isLongPressDragEnabled() = true
+
+            override fun onSelectedChanged(vh: RecyclerView.ViewHolder?, actionState: Int) {
+                super.onSelectedChanged(vh, actionState)
+                if (actionState == ItemTouchHelper.ACTION_STATE_DRAG) snapshot()
+            }
+
+            override fun clearView(rv: RecyclerView, vh: RecyclerView.ViewHolder) {
+                super.clearView(rv, vh)
+                adapter?.notifyDataSetChanged()
+                updateInfo()
+            }
+        }
+        ItemTouchHelper(callback).attachToRecyclerView(binding.recycler)
     }
 
     override fun onPdfChosen(uri: Uri) {
@@ -61,7 +96,7 @@ class PagesActivity : PdfActivity() {
             updateInfo()
         }) {
             val f = Files.copyToCache(this, uri)
-            if (PdfEngine.isEncrypted(f)) error(getString(R.string.msg_encrypted))
+            if (PdfEngine.needsPassword(f)) error(getString(R.string.msg_needs_password))
             source = f
             val d = ParcelFileDescriptor.open(f, ParcelFileDescriptor.MODE_READ_ONLY)
             pfd = d
@@ -110,26 +145,6 @@ class PagesActivity : PdfActivity() {
         if (sel.size >= items.size) { toast(getString(R.string.msg_keep_one)); return }
         snapshot()
         items.removeAll { it.selected }
-        refresh()
-    }
-
-    private fun moveSelected(direction: Int) {
-        val sel = items.filter { it.selected }
-        if (sel.isEmpty()) { toast(getString(R.string.msg_need_selection)); return }
-        snapshot()
-        if (direction > 0) {
-            for (i in items.indices.reversed()) {
-                if (items[i].selected && i < items.size - 1 && !items[i + 1].selected) {
-                    val tmp = items[i]; items[i] = items[i + 1]; items[i + 1] = tmp
-                }
-            }
-        } else {
-            for (i in items.indices) {
-                if (items[i].selected && i > 0 && !items[i - 1].selected) {
-                    val tmp = items[i]; items[i] = items[i - 1]; items[i - 1] = tmp
-                }
-            }
-        }
         refresh()
     }
 

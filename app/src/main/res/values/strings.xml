@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">PDFsmith</string>
+    <string name="app_name">NovaPDF</string>
     <string name="app_tagline">Serious PDF editing, offline and fast</string>
 
     <string name="section_edit">Edit</string>
@@ -10,7 +10,7 @@
     <string name="tool_view">Read PDF</string>
     <string name="tool_view_desc">Open and read any PDF with smooth zoom</string>
     <string name="tool_pages">Organize pages</string>
-    <string name="tool_pages_desc">Rotate, reorder, delete and extract pages</string>
+    <string name="tool_pages_desc">Long-press a page and drag to reorder, rotate or delete</string>
     <string name="tool_merge">Merge PDFs</string>
     <string name="tool_merge_desc">Combine several PDFs into one</string>
     <string name="tool_split">Split PDF</string>
@@ -18,13 +18,13 @@
     <string name="tool_images_pdf">Images to PDF</string>
     <string name="tool_images_pdf_desc">Turn photos and scans into a PDF</string>
     <string name="tool_annotate">Annotate &amp; sign</string>
-    <string name="tool_annotate_desc">Add text, highlights, drawings and signatures</string>
+    <string name="tool_annotate_desc">Highlight, draw, add text, sign, insert images</string>
     <string name="tool_forms">Fill forms</string>
     <string name="tool_forms_desc">Fill interactive PDF form fields</string>
     <string name="tool_compress">Compress</string>
     <string name="tool_compress_desc">Shrink file size by re-encoding images</string>
     <string name="tool_watermark">Watermark</string>
-    <string name="tool_watermark_desc">Stamp text or an image over every page</string>
+    <string name="tool_watermark_desc">Stamp text over every page — centre or random spot</string>
     <string name="tool_protect">Protect</string>
     <string name="tool_protect_desc">Add a password and permissions</string>
     <string name="tool_unlock">Unlock</string>
@@ -47,13 +47,49 @@
     <string name="action_cancel">Cancel</string>
     <string name="action_close">Close</string>
     <string name="action_undo">Undo</string>
+    <string name="action_redo">Redo</string>
     <string name="action_clear">Clear</string>
     <string name="action_add">Add</string>
+    <string name="action_apply">Apply</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_rotate">Rotate</string>
     <string name="action_move_up">Move up</string>
     <string name="action_move_down">Move down</string>
-    <string name="action_rotate">Rotate</string>
-    <string name="action_delete">Delete</string>
     <string name="action_select_all">Select all</string>
+    <string name="action_theme">Theme</string>
+    <string name="action_reset">Reset</string>
+
+    <string name="tool_pen">Pen</string>
+    <string name="tool_highlighter">Highlighter</string>
+    <string name="tool_text_box">Text</string>
+    <string name="tool_cover">Cover &amp; type</string>
+    <string name="tool_signature">Signature</string>
+    <string name="tool_insert_image">Image</string>
+    <string name="tool_move">Select / move</string>
+    <string name="tool_erase">Erase</string>
+    <string name="tool_pan">Move page</string>
+    <string name="label_colour">Colour</string>
+    <string name="label_size">Size</string>
+    <string name="label_opacity">Opacity</string>
+    <string name="label_font">Font</string>
+    <string name="label_position">Position</string>
+    <string name="position_centre">Centre</string>
+    <string name="position_random">Random on every page</string>
+    <string name="label_level">Compression level</string>
+    <string name="level_light">Light — best quality</string>
+    <string name="level_balanced">Balanced</string>
+    <string name="level_strong">Strong — smallest file</string>
+    <string name="label_rotation">Rotation</string>
+    <string name="hint_reorder">Long-press a page, then drag to move it.</string>
+    <string name="hint_cover">Drag a box over the text you want to replace, then type the new text.</string>
+    <string name="hint_sign">Draw your signature, pick a colour, then tap the page to place it.</string>
+    <string name="hint_selected_item">Selected — drag to move, pinch to resize.</string>
+    <string name="msg_nothing_selected">Tap an item to select it first</string>
+    <string name="msg_cover_first">Drag a box over the area first</string>
+
+    <string name="theme_system">Follow system</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
 
     <string name="hint_watermark_text">Watermark text</string>
     <string name="hint_password">Password</string>
@@ -68,14 +104,23 @@
     <string name="hint_opacity">Opacity (0.1 - 1.0)</string>
     <string name="hint_text_size">Text size</string>
 
-    <string name="label_quality">Compression level</string>
+    <string name="colour_red">Red</string>
+    <string name="colour_blue">Blue</string>
+    <string name="colour_green">Green</string>
+    <string name="colour_black">Black</string>
+    <string name="colour_grey">Grey</string>
+    <string name="colour_orange">Orange</string>
+    <string name="colour_purple">Purple</string>
+    <string name="colour_teal">Teal</string>
+    <string name="colour_yellow">Yellow</string>
+
     <string name="label_pages">%1$d pages</string>
     <string name="label_selected">%1$d selected</string>
     <string name="label_no_file">No file chosen</string>
 
     <string name="msg_processing">Working…</string>
     <string name="msg_done">Done</string>
-    <string name="msg_saved_to">Saved to %1$s</string>
+    <string name="msg_saved_to">Saved %1$s</string>
     <string name="msg_failed">Could not complete: %1$s</string>
     <string name="msg_pick_file_first">Choose a PDF first</string>
     <string name="msg_enter_text">Enter some text</string>
@@ -83,13 +128,13 @@
     <string name="msg_passwords_mismatch">Passwords do not match</string>
     <string name="msg_need_two">Choose at least two PDFs</string>
     <string name="msg_need_one_image">Choose at least one image</string>
-    <string name="msg_encrypted">This PDF is password-protected. Use Unlock, or open it with the password.</string>
+    <string name="msg_needs_password">This PDF needs its password — use Unlock and type it.</string>
     <string name="msg_no_form_fields">No fillable form fields were found in this PDF.</string>
     <string name="msg_no_images">No embedded images were found.</string>
     <string name="msg_need_selection">Select at least one page</string>
     <string name="msg_keep_one">At least one page must remain</string>
     <string name="msg_invalid_ranges">Enter valid page ranges</string>
-    <string name="msg_offline">PDFsmith works fully offline. Your files never leave your device.</string>
+    <string name="msg_offline">NovaPDF works fully offline. Your files never leave your device.</string>
 
     <string name="cd_tool_icon">Tool icon</string>
 </resources>

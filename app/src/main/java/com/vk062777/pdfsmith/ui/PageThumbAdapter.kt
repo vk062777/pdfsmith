@@ -3,6 +3,7 @@ package com.vk062777.pdfsmith.ui
 import android.graphics.Bitmap
 import android.util.LruCache
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.vk062777.pdfsmith.R
@@ -33,16 +34,14 @@ class PageThumbAdapter(
 
     override fun onBindViewHolder(holder: VH, position: Int) {
         val item = items[position]
+        val ctx = holder.itemView.context
+        val stroke = (if (item.selected) 3 else 1) * ctx.resources.displayMetrics.density
         holder.b.apply {
             pageNo.text = (position + 1).toString()
             thumb.rotation = item.rotation.toFloat()
-            card.strokeColor = if (item.selected) {
-                holder.itemView.context.getColor(R.color.brand_primary)
-            } else {
-                holder.itemView.context.getColor(R.color.divider)
-            }
-            card.strokeWidth = if (item.selected) 6 else 2
-            check.visibility = if (item.selected) android.view.View.VISIBLE else android.view.View.GONE
+            card.strokeColor = ctx.getColor(if (item.selected) R.color.brand_primary else R.color.divider)
+            card.strokeWidth = stroke.toInt()
+            check.visibility = if (item.selected) View.VISIBLE else View.GONE
             root.setOnClickListener { onToggle(position) }
 
             val cached = cache.get(item.original)
@@ -50,7 +49,7 @@ class PageThumbAdapter(
                 thumb.setImageBitmap(cached)
             } else {
                 thumb.setImageBitmap(null)
-                val targetW = (holder.itemView.resources.displayMetrics.widthPixels / 3) * 2
+                val targetW = (ctx.resources.displayMetrics.widthPixels / 3) * 2
                 scope.launch {
                     val bmp = withContext(Dispatchers.IO) {
                         runCatching { renderer.render(item.original - 1, targetW) }.getOrNull()

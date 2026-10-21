@@ -2,7 +2,9 @@ package com.vk062777.pdfsmith
 
 import android.content.Intent
 import android.os.Bundle
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.recyclerview.widget.GridLayoutManager
 import com.vk062777.pdfsmith.databinding.ActivityMainBinding
 import com.vk062777.pdfsmith.model.Action
@@ -28,6 +30,31 @@ class MainActivity : AppCompatActivity() {
         }
         binding.recycler.layoutManager = lm
         binding.recycler.adapter = adapter
+
+        binding.btnTheme.setOnClickListener { chooseTheme() }
+    }
+
+    private fun chooseTheme() {
+        val modes = arrayOf(
+            getString(R.string.theme_system),
+            getString(R.string.theme_light),
+            getString(R.string.theme_dark)
+        )
+        AlertDialog.Builder(this)
+            .setTitle(R.string.action_theme)
+            .setSingleChoiceItems(modes, PdfSmithApp.themePref(this)) { dialog, which ->
+                PdfSmithApp.setThemePref(this, which)
+                AppCompatDelegate.setDefaultNightMode(
+                    when (which) {
+                        1 -> AppCompatDelegate.MODE_NIGHT_NO
+                        2 -> AppCompatDelegate.MODE_NIGHT_YES
+                        else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+                    }
+                )
+                dialog.dismiss()
+            }
+            .setNegativeButton(R.string.action_cancel, null)
+            .show()
     }
 
     private fun dispatch(action: Action) {

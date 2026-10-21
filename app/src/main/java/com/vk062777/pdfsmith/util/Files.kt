@@ -25,8 +25,15 @@ object Files {
 
     fun workDir(context: Context): File = File(context.cacheDir, "work").apply { mkdirs() }
 
+    private val counter = java.util.concurrent.atomic.AtomicInteger(0)
+
+    /** Unique cache file name — the counter guarantees no two copies collide even
+     *  when several files are imported within the same millisecond. */
     fun newFile(context: Context, name: String): File =
-        File(workDir(context), System.currentTimeMillis().toString() + "_" + sanitize(name))
+        File(
+            workDir(context),
+            System.currentTimeMillis().toString() + "_" + counter.incrementAndGet() + "_" + sanitize(name)
+        )
 
     fun sanitize(name: String): String = name.replace(Regex("[^A-Za-z0-9._-]"), "_")
 

@@ -8,7 +8,7 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/tool_annotate_desc"
+        android:text="@string/hint_sign"
         android:textColor="@color/text_secondary"
         android:textSize="13sp" />
 
@@ -17,14 +17,56 @@
         android:layout_width="match_parent"
         android:layout_height="180dp"
         android:layout_marginTop="12dp"
-        android:background="#FFF4F5F8" />
+        android:background="@color/surface_variant" />
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/clear"
-        style="@style/Widget.Material3.Button.TextButton"
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="end"
-        android:text="@string/action_clear" />
+        android:layout_marginTop="12dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/label_colour"
+            android:textColor="@color/text_secondary"
+            android:textSize="12sp" />
+
+        <ImageButton
+            android:id="@+id/inkBlack"
+            android:layout_width="34dp"
+            android:layout_height="34dp"
+            android:layout_marginStart="10dp"
+            android:background="@drawable/bg_swatch"
+            android:backgroundTint="@color/swatch_black"
+            android:contentDescription="@string/label_colour" />
+
+        <ImageButton
+            android:id="@+id/inkBlue"
+            android:layout_width="34dp"
+            android:layout_height="34dp"
+            android:layout_marginStart="8dp"
+            android:background="@drawable/bg_swatch"
+            android:backgroundTint="@color/swatch_blue"
+            android:contentDescription="@string/label_colour" />
+
+        <ImageButton
+            android:id="@+id/inkRed"
+            android:layout_width="34dp"
+            android:layout_height="34dp"
+            android:layout_marginStart="8dp"
+            android:background="@drawable/bg_swatch"
+            android:backgroundTint="@color/swatch_red"
+            android:contentDescription="@string/label_colour" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/clear"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="@string/action_clear" />
+    </LinearLayout>
 
 </LinearLayout>

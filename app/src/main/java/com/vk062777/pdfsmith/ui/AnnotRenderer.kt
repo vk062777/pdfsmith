@@ -10,7 +10,7 @@ import com.vk062777.pdfsmith.model.Annot
 
 /**
  * Draws annotations. The very same routine powers the on-screen preview and the
- * exported raster layer, so preview and output are pixel-for-pixel consistent.
+ * exported raster layer, so preview and output are consistent.
  */
 object AnnotRenderer {
 
@@ -33,15 +33,22 @@ object AnnotRenderer {
 
         for (item in items) {
             when (item) {
+                is Annot.Cover -> {
+                    fill.style = Paint.Style.FILL
+                    fill.color = item.color
+                    canvas.drawRect(
+                        ox + item.fx * pageW * pxPerPt, oy + item.fy * pageH * pxPerPt,
+                        ox + (item.fx + item.fw) * pageW * pxPerPt,
+                        oy + (item.fy + item.fh) * pageH * pxPerPt, fill
+                    )
+                }
                 is Annot.Highlight -> {
                     fill.style = Paint.Style.FILL
                     fill.color = withAlpha(item.color, 0.35f)
                     canvas.drawRect(
-                        ox + item.fx * pageW * pxPerPt,
-                        oy + item.fy * pageH * pxPerPt,
+                        ox + item.fx * pageW * pxPerPt, oy + item.fy * pageH * pxPerPt,
                         ox + (item.fx + item.fw) * pageW * pxPerPt,
-                        oy + (item.fy + item.fh) * pageH * pxPerPt,
-                        fill
+                        oy + (item.fy + item.fh) * pageH * pxPerPt, fill
                     )
                 }
                 is Annot.Stroke -> {
@@ -52,7 +59,7 @@ object AnnotRenderer {
                         val y = oy + p.y * pageH * pxPerPt
                         if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
                     }
-                    stroke.color = item.color
+                    stroke.color = withAlpha(item.color, item.opacity)
                     stroke.strokeWidth = (item.widthPt * pxPerPt).coerceAtLeast(1f)
                     canvas.drawPath(path, stroke)
                 }
@@ -68,8 +75,7 @@ object AnnotRenderer {
                 }
                 is Annot.Stamp -> {
                     val dst = RectF(
-                        ox + item.fx * pageW * pxPerPt,
-                        oy + item.fy * pageH * pxPerPt,
+                        ox + item.fx * pageW * pxPerPt, oy + item.fy * pageH * pxPerPt,
                         ox + (item.fx + item.fw) * pageW * pxPerPt,
                         oy + (item.fy + item.fh) * pageH * pxPerPt
                     )
@@ -84,8 +90,7 @@ object AnnotRenderer {
         val w = (pageW * scale).toInt().coerceAtLeast(1)
         val h = (pageH * scale).toInt().coerceAtLeast(1)
         val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bmp)
-        draw(canvas, items, pageW, pageH, scale, 0f, 0f)
+        draw(Canvas(bmp), items, pageW, pageH, scale, 0f, 0f)
         return bmp
     }
 

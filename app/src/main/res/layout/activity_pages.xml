@@ -24,10 +24,20 @@
         android:paddingStart="14dp"
         android:paddingTop="10dp"
         android:paddingEnd="14dp"
-        android:paddingBottom="6dp"
-        android:textColor="@color/text_secondary"
+        android:paddingBottom="2dp"
+        android:textColor="@color/text_primary"
         android:textSize="13sp"
         tools:text="3 pages" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingStart="14dp"
+        android:paddingEnd="14dp"
+        android:paddingBottom="6dp"
+        android:text="@string/hint_reorder"
+        android:textColor="@color/text_secondary"
+        android:textSize="12sp" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recycler"
@@ -71,26 +81,6 @@
                 android:contentDescription="@string/action_delete"
                 android:src="@drawable/ic_delete"
                 app:tint="@color/danger" />
-
-            <ImageButton
-                android:id="@+id/btnLeft"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="@string/action_move_up"
-                android:rotation="-90"
-                android:src="@drawable/ic_back"
-                app:tint="@color/text_primary" />
-
-            <ImageButton
-                android:id="@+id/btnRight"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="@string/action_move_down"
-                android:rotation="180"
-                android:src="@drawable/ic_back"
-                app:tint="@color/text_primary" />
 
             <ImageButton
                 android:id="@+id/btnSelectAll"

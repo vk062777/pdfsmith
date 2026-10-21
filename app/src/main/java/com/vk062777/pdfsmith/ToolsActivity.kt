@@ -3,9 +3,14 @@ package com.vk062777.pdfsmith
 import android.net.Uri
 import android.os.Bundle
 import android.text.InputType
+import android.view.View
+import android.widget.ArrayAdapter
 import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.Spinner
+import android.widget.TextView
 import androidx.documentfile.provider.DocumentFile
+import com.google.android.material.switchmaterial.SwitchMaterial
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 import com.vk062777.pdfsmith.databinding.ActivityToolsBinding
@@ -15,13 +20,21 @@ import com.vk062777.pdfsmith.util.Files
 import java.io.File
 
 /**
- * A single screen that drives the one-shot document tools: compress, watermark,
- * protect, unlock, edit metadata, extract images, page numbers and split.
+ * One-shot document tools: compress, watermark, protect, unlock, metadata,
+ * extract images, page numbers and split.
  */
 class ToolsActivity : PdfActivity() {
 
     companion object {
         const val EXTRA_TOOL = "tool"
+
+        private val FONT_NAMES = listOf("Helvetica", "Helvetica Bold", "Times", "Times Bold", "Courier")
+        private val COLOUR_NAMES = listOf("Black", "Red", "Blue", "Green", "Orange", "Purple", "Grey")
+        private val COLOUR_VALUES = listOf(
+            0xFF111111.toInt(), 0xFFE03131.toInt(), 0xFF1C7ED6.toInt(), 0xFF2F9E44.toInt(),
+            0xFFF08C00.toInt(), 0xFF7048E8.toInt(), 0xFF868E96.toInt()
+        )
+        private val LEVEL_NAMES = listOf("Light — best quality", "Balanced", "Strong — smallest file")
     }
 
     private lateinit var binding: ActivityToolsBinding
@@ -42,6 +55,10 @@ class ToolsActivity : PdfActivity() {
     private var fAuthor: EditText? = null
     private var fSubject: EditText? = null
     private var fKeywords: EditText? = null
+    private var fFontSpinner: Spinner? = null
+    private var fColourSpinner: Spinner? = null
+    private var fRandom: SwitchMaterial? = null
+    private var fLevelSpinner: Spinner? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -84,19 +101,27 @@ class ToolsActivity : PdfActivity() {
             binding.btnRun.isEnabled = true
         }) {
             val f = Files.copyToCache(this, uri)
-            if (PdfEngine.isEncrypted(f)) error(getString(R.string.msg_encrypted))
+            // Unlock must accept protected files; other tools need an openable PDF.
+            if (tool != Action.UNLOCK && PdfEngine.needsPassword(f)) {
+                error(getString(R.string.msg_needs_password))
+            }
             source = f
-            if (tool == Action.METADATA) PdfEngine.getMetadata(f) else emptyMap<String, String>()
+            if (tool == Action.METADATA && !PdfEngine.needsPassword(f)) {
+                PdfEngine.getMetadata(f)
+            } else {
+                emptyMap<String, String>()
+            }
         }
     }
 
     override fun onTreeChosen(uri: Uri) {
         treeUri = uri
-        val name = uri.lastPathSegment ?: "folder"
-        binding.outputHint.visibility = android.view.View.VISIBLE
-        binding.outputHint.text = "Output folder: $name"
+        binding.outputHint.visibility = View.VISIBLE
+        binding.outputHint.text = "Output folder: " + (uri.lastPathSegment ?: "folder")
         if (pendingRun) { pendingRun = false; onRun() }
     }
+
+    // ---- dynamic parameter UI ---------------------------------------------
 
     private fun addField(hint: String, inputType: Int = InputType.TYPE_CLASS_TEXT, prefill: String = ""): EditText {
         val til = TextInputLayout(this).apply {
@@ -114,17 +139,59 @@ class ToolsActivity : PdfActivity() {
         return et
     }
 
+    private fun addSpinner(label: String, options: List<String>, selected: Int = 0): Spinner {
+        val box = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
+            ).also { it.topMargin = dp(12) }
+        }
+        box.addView(TextView(this).apply {
+            text = label
+            textSize = 12f
+            setTextColor(getColor(R.color.text_secondary))
+        })
+        val sp = Spinner(this)
+        sp.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, options)
+        sp.setSelection(selected)
+        box.addView(sp)
+        binding.params.addView(box)
+        return sp
+    }
+
+    private fun addSwitch(label: String, checked: Boolean = false): SwitchMaterial {
+        val sw = SwitchMaterial(this).apply {
+            text = label
+            isChecked = checked
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
+            ).also { it.topMargin = dp(12) }
+        }
+        binding.params.addView(sw)
+        return sw
+    }
+
     private fun buildParams(meta: Map<String, String>) {
         binding.params.removeAllViews()
         fText = null; fFont = null; fOpacity = null; fPw = null; fPw2 = null
         fRanges = null; fFormat = null
         fTitle = null; fAuthor = null; fSubject = null; fKeywords = null
+        fFontSpinner = null; fColourSpinner = null; fRandom = null; fLevelSpinner = null
 
         when (tool) {
             Action.WATERMARK -> {
                 fText = addField(getString(R.string.hint_watermark_text))
-                fFont = addField(getString(R.string.hint_font_size), InputType.TYPE_CLASS_NUMBER, "60")
-                fOpacity = addField(getString(R.string.hint_opacity), InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL, "0.25")
+                fFontSpinner = addSpinner(getString(R.string.label_font), FONT_NAMES, 1)
+                fColourSpinner = addSpinner(getString(R.string.label_colour), COLOUR_NAMES, 1)
+                fRandom = addSwitch(getString(R.string.position_random), false)
+                fFont = addField(getString(R.string.hint_font_size), InputType.TYPE_CLASS_NUMBER, "0")
+                fOpacity = addField(
+                    getString(R.string.hint_opacity),
+                    InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL, "0.25"
+                )
+            }
+            Action.COMPRESS -> {
+                fLevelSpinner = addSpinner(getString(R.string.label_level), LEVEL_NAMES, 1)
             }
             Action.PROTECT -> {
                 fPw = addField(getString(R.string.hint_password), InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD)
@@ -145,27 +212,38 @@ class ToolsActivity : PdfActivity() {
             }
             Action.SPLIT -> {
                 fRanges = addField(getString(R.string.hint_ranges), InputType.TYPE_CLASS_TEXT, "1-3, 4-6")
-                binding.outputHint.visibility = android.view.View.VISIBLE
+                binding.outputHint.visibility = View.VISIBLE
                 binding.outputHint.text = "Choose a folder, then Run."
             }
             Action.EXTRACT -> {
-                binding.outputHint.visibility = android.view.View.VISIBLE
+                binding.outputHint.visibility = View.VISIBLE
                 binding.outputHint.text = "Choose a folder, then Run."
             }
-            Action.COMPRESS -> { }
             else -> { }
         }
     }
 
+    // ---- run ---------------------------------------------------------------
+
     private fun onRun() {
         when (tool) {
-            Action.COMPRESS -> single { PdfEngine.compress(it.first, it.second) }
+            Action.COMPRESS -> {
+                val level = fLevelSpinner?.selectedItemPosition ?: 1
+                single { PdfEngine.compress(it.first, it.second, level) }
+            }
             Action.WATERMARK -> {
                 val text = fText?.text?.toString()?.trim().orEmpty()
                 if (text.isEmpty()) return toast(getString(R.string.msg_enter_text))
-                val size = fFont?.text?.toString()?.toFloatOrNull() ?: 60f
-                val op = (fOpacity?.text?.toString()?.toFloatOrNull() ?: 0.25f).coerceIn(0.05f, 1f)
-                single { PdfEngine.watermarkText(it.first, text, size, op, 0xFFFF0000.toInt(), 45f, it.second) }
+                val o = PdfEngine.WatermarkOptions()
+                o.text = text
+                o.randomPosition = fRandom?.isChecked ?: false
+                val fontIdx = fFontSpinner?.selectedItemPosition ?: 0
+                o.font = when (fontIdx) { 2, 3 -> "Times"; 4 -> "Courier"; else -> "Helvetica" }
+                o.bold = fontIdx == 1 || fontIdx == 3
+                o.color = COLOUR_VALUES.getOrElse(fColourSpinner?.selectedItemPosition ?: 1) { COLOUR_VALUES[1] }
+                o.fontSize = fFont?.text?.toString()?.toFloatOrNull() ?: 0f
+                o.opacity = (fOpacity?.text?.toString()?.toFloatOrNull() ?: 0.25f).coerceIn(0.05f, 1f)
+                single { PdfEngine.watermarkText(it.first, o, it.second) }
             }
             Action.PROTECT -> {
                 val p1 = fPw?.text?.toString().orEmpty()
@@ -176,7 +254,6 @@ class ToolsActivity : PdfActivity() {
             }
             Action.UNLOCK -> {
                 val p = fPw?.text?.toString().orEmpty()
-                if (p.isEmpty()) return toast(getString(R.string.msg_enter_password))
                 single { PdfEngine.decrypt(it.first, p, it.second) }
             }
             Action.METADATA -> {
@@ -206,7 +283,6 @@ class ToolsActivity : PdfActivity() {
         }
     }
 
-    /** Single-file output through the system "Save as" dialog. */
     private fun single(produce: (Pair<File, File>) -> Unit) {
         val src = source ?: return toast(getString(R.string.msg_pick_file_first))
         runAndSave(Files.suggestName(sourceName, suffixFor(tool))) { out ->
@@ -214,7 +290,6 @@ class ToolsActivity : PdfActivity() {
         }
     }
 
-    /** Multi-file output into a chosen folder. */
     private fun multi(produce: (File) -> List<File>) {
         val tree = treeUri ?: return
         runTask(getString(R.string.msg_processing), onDone = done@{ n ->

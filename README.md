@@ -1,11 +1,14 @@
-# PDFsmith
+# NovaPDF
 
 **A serious, offline-first PDF editor for Android.** Everything runs on the device —
 no accounts, no uploads, no network permission. Open any PDF and read it with smooth
-pinch-zoom, then actually edit it: merge, split, reorganise pages, annotate, sign,
-fill forms, watermark, protect, compress and more.
+pinch-zoom, then actually edit it: merge, split, reorganise pages by dragging them,
+annotate, sign, fill forms, watermark, protect, compress and more.
 
-Package: `com.vk062777.pdfsmith` · Display name: **PDFsmith** · Licence: Apache-2.0
+Package: `com.vk062777.pdfsmith` · Display name: **NovaPDF** · Licence: Apache-2.0
+
+> The package id is kept stable so the app upgrades cleanly in place and the signing
+> key stays valid. It can be renamed before the first Play Store upload on request.
 
 ---
 
@@ -13,28 +16,28 @@ Package: `com.vk062777.pdfsmith` · Display name: **PDFsmith** · Licence: Apach
 
 | Tool | What it does |
 |---|---|
-| **Read PDF** | Fast, smooth viewer (platform `PdfRenderer`) with pinch-zoom, pan, double-tap zoom and page swipe. Also opens PDFs shared from other apps. |
-| **Organize pages** | Live thumbnail grid — rotate, reorder, delete and extract pages, with undo. Saves a new PDF. |
+| **Read PDF** | Fast viewer with pinch-zoom, pan, double-tap, page swipe **and rotate**. Pages are supersampled and re-rendered on zoom, so text stays crisp. Also opens PDFs shared from other apps. |
+| **Organize pages** | Thumbnail grid — **long-press a page and drag to reorder**, plus rotate, delete, extract and undo. |
 | **Merge PDFs** | Combine any number of PDFs, in any order. |
 | **Split PDF** | Break a document into files by page ranges (e.g. `1-3, 4-6, 9`). |
-| **Images to PDF** | Turn photos/scans into a PDF, one page per image, reorderable. |
-| **Annotate & sign** | Highlight, freehand draw, add text, place a drawn signature or an image. WYSIWYG — preview and export use the same renderer. |
+| **Images to PDF** | Turn photos/scans into a PDF, one page per image. Bounded decoding keeps large batches from running out of memory. |
+| **Annotate & sign** | Pen, highlighter, text, **cover-and-retype**, signature and images — each with **colour, size and opacity**, plus **undo/redo**, **select / move / pinch-to-resize** and erase. Two-finger pinch still zooms. |
 | **Fill forms** | Detects AcroForm fields (text, checkbox, radio, combo, list) and fills them. |
-| **Compress** | Genuinely shrinks image-heavy PDFs: downsamples and re-encodes embedded rasters, strips metadata. |
-| **Watermark** | Text or image watermark across every page, with size/opacity control. |
+| **Compress** | Three levels (Light / Balanced / Strong). Downsamples and re-encodes embedded images (including inside form XObjects) and strips metadata and thumbnails. |
+| **Watermark** | Text watermark with **font**, **colour**, size, opacity and a **random position on every page** (or centred). |
 | **Protect** | Adds a password and permissions (128-bit encryption). |
-| **Unlock** | Removes a password you know. |
+| **Unlock** | Removes a password. Works for owner-only protection (no password needed) and for files whose user password you know. |
 | **Edit metadata** | Title, author, subject, keywords. |
 | **Extract images** | Pulls embedded raster images out of a PDF. |
 | **Page numbers** | Number every page with a custom format (`Page {n} of {total}`). |
 
-All file access goes through the Storage Access Framework, so **no storage permission
-is requested** and the app works fully offline.
+**Dark mode** is supported throughout (follows the system, or pick Light / Dark from
+the theme button on the home screen). All file access goes through the Storage Access
+Framework, so **no storage permission is requested** and the app works fully offline.
 
 ## Building
 
-The project builds with Gradle 8.7 / AGP 8.5.2 / Kotlin 1.9.24, JDK 17,
-compileSdk 34, minSdk 24.
+Gradle 8.7 / AGP 8.5.2 / Kotlin 1.9.24, JDK 17, compileSdk 34, minSdk 24.
 
 ```bash
 gradle :app:assembleDebug          # debug build
@@ -53,18 +56,19 @@ build is simply unsigned:
 | `KEY_ALIAS` | key alias |
 | `KEY_PASSWORD` | key password |
 
-In CI these are populated from repository secrets (`KEYSTORE_BASE64` is decoded to a
-file first). The same keystore must be kept safe and reused for every future Play
-Store upload — losing it means you can never update the listing again.
+In CI these come from repository secrets (`KEYSTORE_BASE64` is decoded to a file
+first). Keep the keystore safe — it is the app's permanent identity.
 
 ## Verification
 
 The document engine is verified independently of the UI. `tools/verify-engine.sh`
 compiles the **real** engine source against the **real** `pdfbox-android` library on a
 plain JVM (with tiny stubs for the handful of `android.*` classes the engine touches)
-and runs **39 behavioural assertions** covering merge, split, reorder, rotate, delete,
-text/image stamping, watermark, page numbers, encryption/decryption, compression,
-metadata, images-to-PDF, image extraction and form filling.
+and runs **53 behavioural assertions**: merge, split, reorder, rotate, delete,
+text/image stamping, watermark (centred, random, multiple fonts/colours), page
+numbers, encryption, decryption (owner-only and user-password), compression
+(asserting a real size reduction), metadata, images-to-PDF (single and multi-image),
+image extraction and form filling.
 
 ```bash
 bash tools/verify-engine.sh
@@ -76,7 +80,7 @@ This runs automatically on every push in GitHub Actions, before the APK is built
 
 `.github/workflows/android.yml` runs on every push to `main`:
 
-1. verifies the engine (39 checks),
+1. verifies the engine (53 checks),
 2. builds a **signed** release APK,
 3. uploads it as a build artifact and attaches it to a GitHub Release.
 
