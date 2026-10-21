@@ -39,24 +39,24 @@ class FormsActivity : PdfActivity() {
 
     override fun onPdfChosen(uri: Uri) {
         sourceName = Files.displayName(this, uri)
-        runTask(getString(R.string.msg_processing)) {
-            val f = Files.copyToCache(this, uri)
-            if (PdfEngine.isEncrypted(f)) error(getString(R.string.msg_encrypted))
-            source = f
-            PdfEngine.listFormFields(f)
-        } result@{ fields ->
-            if (fields == null) return@result
+        runTask(getString(R.string.msg_processing), onDone = loaded@{ fields ->
+            if (fields == null) return@loaded
             binding.container.removeAllViews()
             rows.clear()
             if (fields.isEmpty()) {
                 binding.info.text = getString(R.string.msg_no_form_fields)
                 binding.btnSave.isEnabled = false
-                return@result
+                return@loaded
             }
             binding.info.text = getString(R.string.label_pages, PdfEngine.pageCount(source!!)) +
                     "   •   " + fields.size + " fields"
             fields.forEach { addRow(it) }
             binding.btnSave.isEnabled = true
+        }) {
+            val f = Files.copyToCache(this, uri)
+            if (PdfEngine.isEncrypted(f)) error(getString(R.string.msg_encrypted))
+            source = f
+            PdfEngine.listFormFields(f)
         }
     }
 
