@@ -6,6 +6,7 @@ import android.os.ParcelFileDescriptor
 import android.view.Menu
 import android.view.MenuItem
 import android.graphics.pdf.PdfRenderer
+import androidx.lifecycle.lifecycleScope
 import androidx.viewpager2.widget.ViewPager2
 import com.vk062777.pdfsmith.databinding.ActivityViewerBinding
 import com.vk062777.pdfsmith.engine.PdfEngine
@@ -37,15 +38,15 @@ class ViewerActivity : PdfActivity() {
     override fun onPdfChosen(uri: Uri) = openUri(uri)
 
     private fun openUri(uri: Uri) {
-        runTask(getString(R.string.msg_processing)) {
-            val f = Files.copyToCache(this, uri)
-            if (PdfEngine.isEncrypted(f)) error(getString(R.string.msg_encrypted))
-            f
-        } result@{ f ->
-            if (f == null) return@result
+        runTask(getString(R.string.msg_processing), onDone = opened@{ f ->
+            if (f == null) return@opened
             current = f
             binding.toolbar.title = Files.displayName(this, uri)
             show(f)
+        }) {
+            val f = Files.copyToCache(this, uri)
+            if (PdfEngine.isEncrypted(f)) error(getString(R.string.msg_encrypted))
+            f
         }
     }
 
