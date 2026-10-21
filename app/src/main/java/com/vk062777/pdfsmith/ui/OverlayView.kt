@@ -73,16 +73,16 @@ class OverlayView @JvmOverloads constructor(
         }
     )
 
-    fun setTool(t: Tool) {
+    fun applyTool(t: Tool) {
         tool = t
-        if (t != Tool.SELECT) setSelected(-1)
+        if (t != Tool.SELECT) selectItem(-1)
         imageView?.panEnabled = (t == Tool.PAN)
         invalidate()
     }
 
     fun refresh() = invalidate()
 
-    fun setSelected(index: Int) {
+    fun selectItem(index: Int) {
         selected = index
         onSelectionChanged?.invoke(index)
         invalidate()
@@ -242,7 +242,7 @@ class OverlayView @JvmOverloads constructor(
                     Tool.HIGHLIGHT, Tool.COVER -> { dragStart = p; dragNow = p }
                     Tool.SELECT -> {
                         val hit = hitTest(p.x, p.y)
-                        setSelected(hit)
+                        selectItem(hit)
                         if (hit >= 0) { moving = true; moveLast = p; onBeforeChange?.invoke(); changeNotified = true }
                     }
                     else -> { }
@@ -309,7 +309,7 @@ class OverlayView @JvmOverloads constructor(
                         if (hit >= 0) {
                             onBeforeChange?.invoke()
                             items.removeAt(hit)
-                            setSelected(-1)
+                            selectItem(-1)
                             onChanged?.invoke()
                         }
                     }

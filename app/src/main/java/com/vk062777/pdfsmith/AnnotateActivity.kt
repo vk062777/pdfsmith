@@ -104,7 +104,7 @@ class AnnotateActivity : PdfActivity() {
     // ---- tools & options ---------------------------------------------------
 
     private fun selectTool(tool: OverlayView.Tool, button: View) {
-        binding.overlay.setTool(tool)
+        binding.overlay.applyTool(tool)
         val buttons = listOf(
             binding.toolPan, binding.toolPen, binding.toolHighlight, binding.toolText,
             binding.toolCover, binding.toolSign, binding.toolImage, binding.toolMove, binding.toolErase
@@ -197,7 +197,7 @@ class AnnotateActivity : PdfActivity() {
         if (i !in binding.overlay.items.indices) return
         snapshotBefore()
         binding.overlay.items.removeAt(i)
-        binding.overlay.setSelected(-1)
+        binding.overlay.selectItem(-1)
         binding.overlay.refresh()
     }
 
@@ -207,7 +207,7 @@ class AnnotateActivity : PdfActivity() {
         snapshotBefore()
         val item = binding.overlay.items.removeAt(i)
         binding.overlay.items.add(item)
-        binding.overlay.setSelected(binding.overlay.items.size - 1)
+        binding.overlay.selectItem(binding.overlay.items.size - 1)
         binding.overlay.refresh()
     }
 
@@ -222,7 +222,7 @@ class AnnotateActivity : PdfActivity() {
     private fun restore(list: List<Annot>) {
         binding.overlay.items.clear()
         binding.overlay.items.addAll(list.map { it.copy() })
-        binding.overlay.setSelected(-1)
+        binding.overlay.selectItem(-1)
         binding.overlay.refresh()
     }
 
@@ -280,7 +280,7 @@ class AnnotateActivity : PdfActivity() {
                 binding.overlay.pageW = size[0]
                 binding.overlay.pageH = size[1]
                 binding.overlay.items = stamps.getOrPut(index) { mutableListOf() }
-                binding.overlay.setSelected(-1)
+                binding.overlay.selectItem(-1)
                 binding.overlay.post { binding.overlay.refresh() }
             }
         }
