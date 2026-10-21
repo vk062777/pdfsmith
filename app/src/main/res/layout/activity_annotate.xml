@@ -85,7 +85,7 @@
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/tool_image_pdf"
+            android:contentDescription="@string/tool_images_pdf"
             android:src="@drawable/ic_image_pdf"
             app:tint="@color/brand_secondary" />
 
