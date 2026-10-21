@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <style name="Theme.PDFsmith" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/brand_primary</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorPrimaryContainer">@color/brand_primary_container</item>
+        <item name="colorOnPrimaryContainer">@color/brand_on_primary_container</item>
+        <item name="colorSecondary">@color/brand_secondary</item>
+        <item name="colorSecondaryContainer">@color/brand_secondary_container</item>
+        <item name="android:colorBackground">@color/app_background</item>
+        <item name="colorSurface">@color/surface</item>
+        <item name="android:statusBarColor">@color/brand_primary_dark</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:navigationBarColor">@color/surface</item>
+    </style>
+
+    <style name="Theme.PDFsmith.Viewer" parent="Theme.PDFsmith">
+        <item name="android:statusBarColor">@color/text_primary</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+
+    <style name="Widget.PDFsmith.Toolbar" parent="Widget.Material3.Toolbar">
+        <item name="android:background">?attr/colorPrimary</item>
+        <item name="titleTextColor">@color/white</item>
+        <item name="subtitleTextColor">#CCFFFFFF</item>
+    </style>
+
+    <style name="TextAppearance.PDFsmith.SectionHeader" parent="TextAppearance.Material3.TitleMedium">
+        <item name="android:textColor">@color/text_secondary</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:letterSpacing">0.06</item>
+    </style>
+
+</resources>
