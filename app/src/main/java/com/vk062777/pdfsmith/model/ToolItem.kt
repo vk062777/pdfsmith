@@ -1,0 +1,17 @@
+package com.vk062777.pdfsmith.model
+
+import androidx.annotation.DrawableRes
+import androidx.annotation.StringRes
+
+/** A single entry on the home screen. */
+data class ToolItem(
+    @StringRes val title: Int,
+    @StringRes val desc: Int,
+    @DrawableRes val icon: Int,
+    val action: Action
+)
+
+enum class Action {
+    VIEW, ANNOTATE, FORMS, PAGES, MERGE, SPLIT, IMAGES_PDF,
+    COMPRESS, WATERMARK, PROTECT, UNLOCK, METADATA, EXTRACT, PAGENUM
+}
