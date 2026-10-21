@@ -12,6 +12,7 @@ import android.view.View
 import android.widget.EditText
 import android.widget.FrameLayout
 import androidx.appcompat.app.AlertDialog
+import androidx.lifecycle.lifecycleScope
 import com.vk062777.pdfsmith.databinding.ActivityAnnotateBinding
 import com.vk062777.pdfsmith.databinding.DialogSignatureBinding
 import com.vk062777.pdfsmith.engine.PdfEngine
@@ -86,7 +87,12 @@ class AnnotateActivity : PdfActivity() {
 
     override fun onPdfChosen(uri: Uri) {
         sourceName = Files.displayName(this, uri)
-        runTask(getString(R.string.msg_processing)) {
+        runTask(getString(R.string.msg_processing), onDone = opened@{ count ->
+            if (count == null || count == 0) return@opened
+            pageCount = count
+            binding.toolbar.title = Files.baseName(sourceName)
+            goTo(0)
+        }) {
             val f = Files.copyToCache(this, uri)
             if (PdfEngine.isEncrypted(f)) error(getString(R.string.msg_encrypted))
             source = f
@@ -97,11 +103,6 @@ class AnnotateActivity : PdfActivity() {
             val r = android.graphics.pdf.PdfRenderer(d)
             renderer = PageRenderer(r)
             r.pageCount
-        } result@{ count ->
-            if (count == null || count == 0) return@result
-            pageCount = count
-            binding.toolbar.title = Files.baseName(sourceName)
-            goTo(0)
         }
     }
 
