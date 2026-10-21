@@ -53,14 +53,14 @@ abstract class PdfActivity : AppCompatActivity() {
             pendingProducer = null
             if (uri == null || producer == null) return@registerForActivityResult
             val out = Files.newFile(this, pendingName)
-            runTask(getString(R.string.msg_processing)) {
+            runTask(getString(R.string.msg_processing), onDone = saved@{ result ->
+                if (result == null) return@saved
+                toast(getString(R.string.msg_saved_to, pendingName))
+                onSaved(result)
+            }) {
                 producer(out)
                 Files.writeToUri(this, out, uri)
                 out
-            } result@{ result ->
-                if (result == null) return@result
-                toast(getString(R.string.msg_saved_to, pendingName))
-                onSaved(result)
             }
         }
 
@@ -90,7 +90,7 @@ abstract class PdfActivity : AppCompatActivity() {
     }
 
     /** Run [block] on a background thread with a progress dialog; [onDone] gets null on failure. */
-    protected fun <T> runTask(status: String, block: () -> T, onDone: (T?) -> Unit) {
+    protected fun <T> runTask(status: String, onDone: (T?) -> Unit, block: () -> T) {
         busy.show(status)
         lifecycleScope.launch {
             val result: T? = try {
