@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.os.ParcelFileDescriptor
 import android.view.View
 import android.graphics.pdf.PdfRenderer
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
 import com.vk062777.pdfsmith.databinding.ActivityPagesBinding
 import com.vk062777.pdfsmith.engine.PdfEngine
@@ -51,7 +52,14 @@ class PagesActivity : PdfActivity() {
 
     override fun onPdfChosen(uri: Uri) {
         sourceName = Files.displayName(this, uri)
-        runTask(getString(R.string.msg_processing)) {
+        runTask(getString(R.string.msg_processing), onDone = loaded@{ count ->
+            if (count == null) return@loaded
+            items.clear()
+            for (i in 1..count) items.add(PageEntry(i))
+            adapter = PageThumbAdapter(items, renderer!!, lifecycleScope) { pos -> toggle(pos) }
+            binding.recycler.adapter = adapter
+            updateInfo()
+        }) {
             val f = Files.copyToCache(this, uri)
             if (PdfEngine.isEncrypted(f)) error(getString(R.string.msg_encrypted))
             source = f
@@ -60,13 +68,6 @@ class PagesActivity : PdfActivity() {
             val r = PdfRenderer(d)
             renderer = PageRenderer(r)
             r.pageCount
-        } result@{ count ->
-            if (count == null) return@result
-            items.clear()
-            for (i in 1..count) items.add(PageEntry(i))
-            adapter = PageThumbAdapter(items, renderer!!, lifecycleScope) { pos -> toggle(pos) }
-            binding.recycler.adapter = adapter
-            updateInfo()
         }
     }
 
