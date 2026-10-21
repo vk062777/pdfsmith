@@ -78,15 +78,15 @@ class ToolsActivity : PdfActivity() {
 
     override fun onPdfChosen(uri: Uri) {
         sourceName = Files.displayName(this, uri)
-        runTask(getString(R.string.msg_processing)) {
+        runTask(getString(R.string.msg_processing), onDone = loaded@{ meta ->
+            binding.fileName.text = sourceName
+            buildParams(meta ?: emptyMap())
+            binding.btnRun.isEnabled = true
+        }) {
             val f = Files.copyToCache(this, uri)
             if (PdfEngine.isEncrypted(f)) error(getString(R.string.msg_encrypted))
             source = f
             if (tool == Action.METADATA) PdfEngine.getMetadata(f) else emptyMap<String, String>()
-        } result@{ meta ->
-            binding.fileName.text = sourceName
-            buildParams(meta ?: emptyMap())
-            binding.btnRun.isEnabled = true
         }
     }
 
@@ -217,7 +217,9 @@ class ToolsActivity : PdfActivity() {
     /** Multi-file output into a chosen folder. */
     private fun multi(produce: (File) -> List<File>) {
         val tree = treeUri ?: return
-        runTask(getString(R.string.msg_processing)) {
+        runTask(getString(R.string.msg_processing), onDone = done@{ n ->
+            if (n != null) toast(getString(R.string.msg_saved_to, "$n files"))
+        }) {
             val dir = Files.newFile(this, "out").apply { if (exists()) delete(); mkdirs() }
             val files = produce(dir)
             val root = DocumentFile.fromTreeUri(this, tree) ?: error("Cannot open the folder")
@@ -230,8 +232,6 @@ class ToolsActivity : PdfActivity() {
                 }
             }
             saved
-        } result@{ n ->
-            if (n != null) toast(getString(R.string.msg_saved_to, "$n files"))
         }
     }
 
