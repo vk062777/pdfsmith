@@ -35,10 +35,10 @@ class MainActivity : AppCompatActivity() {
         binding.recycler.adapter = adapter
         binding.recycler.setHasFixedSize(true)
         binding.recycler.itemAnimator?.apply {
-            addDuration = 160
-            removeDuration = 160
-            moveDuration = 160
-            changeDuration = 160
+            addDuration = 160L
+            removeDuration = 160L
+            moveDuration = 160L
+            changeDuration = 160L
         }
 
         binding.btnTheme.setOnClickListener { chooseTheme() }
