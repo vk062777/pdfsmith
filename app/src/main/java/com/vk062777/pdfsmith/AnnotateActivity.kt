@@ -43,6 +43,8 @@ class AnnotateActivity : PdfActivity() {
 
     private var pageCount = 0
     private var current = 0
+    private var viewRotation = 0
+    private val renderedWidth = HashMap<Int, Int>()
     private val pageSizes = mutableListOf<FloatArray>()
     private val stamps = HashMap<Int, MutableList<Annot>>()
 
@@ -65,6 +67,7 @@ class AnnotateActivity : PdfActivity() {
         binding.overlay.onBeforeChange = { snapshotBefore() }
         binding.overlay.onChanged = { }
         binding.overlay.onSelectionChanged = { updateOptions() }
+        binding.pageImage.onZoomSettled = { z -> upgradeCurrent(z) }
 
         binding.toolPan.setOnClickListener { selectTool(OverlayView.Tool.PAN, binding.toolPan) }
         binding.toolPen.setOnClickListener { selectTool(OverlayView.Tool.PEN, binding.toolPen) }
@@ -242,22 +245,22 @@ class AnnotateActivity : PdfActivity() {
 
     override fun onPdfChosen(uri: Uri) {
         sourceName = Files.displayName(this, uri)
-        runTask(getString(R.string.msg_processing), onDone = opened@{ count ->
-            if (count == null || count == 0) return@opened
-            pageCount = count
+        openPdf(uri) { f ->
             binding.toolbar.title = Files.baseName(sourceName)
-            goTo(0)
-        }) {
-            val f = Files.copyToCache(this, uri)
-            if (PdfEngine.needsPassword(f)) error(getString(R.string.msg_needs_password))
-            source = f
-            pageSizes.clear()
-            pageSizes.addAll(PdfEngine.pageDisplaySizes(f))
-            val d = ParcelFileDescriptor.open(f, ParcelFileDescriptor.MODE_READ_ONLY)
-            pfd = d
-            val r = PdfRenderer(d)
-            renderer = PageRenderer(r)
-            r.pageCount
+            runTask(getString(R.string.msg_processing), onDone = opened@{ count ->
+                if (count == null || count == 0) return@opened
+                pageCount = count
+                goTo(0)
+            }) {
+                source = f
+                pageSizes.clear()
+                pageSizes.addAll(PdfEngine.pageDisplaySizes(f))
+                val d = ParcelFileDescriptor.open(f, ParcelFileDescriptor.MODE_READ_ONLY)
+                pfd = d
+                val r = PdfRenderer(d)
+                renderer = PageRenderer(r)
+                r.pageCount
+            }
         }
     }
 
@@ -269,19 +272,51 @@ class AnnotateActivity : PdfActivity() {
         binding.nextPage.isEnabled = index < pageCount - 1
         undoStack.clear(); redoStack.clear()
         val r = renderer ?: return
-        val targetW = resources.displayMetrics.widthPixels
+        val targetW = baseRenderWidth()
+        renderedWidth[index] = targetW
         lifecycleScope.launch {
             val bmp = withContext(Dispatchers.IO) {
-                runCatching { r.render(index, targetW) }.getOrNull()
+                runCatching { r.render(index, targetW, viewRotation) }.getOrNull()
             }
-            if (bmp != null) {
+            if (bmp != null && current == index) {
                 binding.pageImage.setImageBitmap(bmp)
-                val size = pageSizes.getOrNull(index) ?: floatArrayOf(595f, 842f)
-                binding.overlay.pageW = size[0]
-                binding.overlay.pageH = size[1]
-                binding.overlay.items = stamps.getOrPut(index) { mutableListOf() }
-                binding.overlay.selectItem(-1)
-                binding.overlay.post { binding.overlay.refresh() }
+                bindOverlay(index)
+            }
+        }
+    }
+
+    private fun bindOverlay(index: Int) {
+        val size = displaySize(index)
+        binding.overlay.pageW = size[0]
+        binding.overlay.pageH = size[1]
+        binding.overlay.items = stamps.getOrPut(index) { mutableListOf() }
+        binding.overlay.selectItem(-1)
+        binding.overlay.post { binding.overlay.refresh() }
+    }
+
+    /** Page size as displayed, including the in-app view rotation. */
+    private fun displaySize(index: Int): FloatArray {
+        val base = pageSizes.getOrNull(index) ?: floatArrayOf(595f, 842f)
+        return if (viewRotation % 180 == 90) floatArrayOf(base[1], base[0]) else base
+    }
+
+    private fun baseRenderWidth() =
+        (resources.displayMetrics.widthPixels * 2.0f).toInt().coerceAtMost(MAX_WIDTH)
+
+    /** Zooming in re-renders the page sharper without disturbing the zoom. */
+    private fun upgradeCurrent(zoom: Float) {
+        val r = renderer ?: return
+        val index = current
+        val target = (resources.displayMetrics.widthPixels * zoom.coerceIn(2f, 4f))
+            .toInt().coerceAtMost(MAX_WIDTH)
+        if ((renderedWidth[index] ?: 0) >= target) return
+        renderedWidth[index] = target
+        lifecycleScope.launch {
+            val bmp = withContext(Dispatchers.IO) {
+                runCatching { r.render(index, target, viewRotation) }.getOrNull()
+            }
+            if (bmp != null && current == index) {
+                binding.pageImage.setImageBitmapPreservingTransform(bmp)
             }
         }
     }
@@ -409,7 +444,7 @@ class AnnotateActivity : PdfActivity() {
             val pages = ArrayList<Int>()
             val rasters = ArrayList<File>()
             for ((page, list) in pagesWithInk) {
-                val size = pageSizes.getOrNull(page) ?: floatArrayOf(595f, 842f)
+                val size = displaySize(page)
                 val bmp = com.vk062777.pdfsmith.ui.AnnotRenderer.rasterize(list, size[0], size[1], 2.5f)
                 val png = Files.newFile(this, "annot_${page + 1}.png")
                 FileOutputStream(png).use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
@@ -417,31 +452,20 @@ class AnnotateActivity : PdfActivity() {
                 pages.add(page + 1)
                 rasters.add(png)
             }
-            // the overlay was produced in the displayed frame, so stamp it rotation-aware
-            PdfEngine.stampDisplayRasters(src, pages, rasters, out)
+            // The overlay lives in the displayed frame, so give the output pages the
+            // matching /Rotate first, then stamp rotation-aware.
+            val target = if (viewRotation == 0) src else Files.newFile(this, "rot.pdf")
+            if (viewRotation != 0) PdfEngine.rotatePages(src, null, viewRotation, target)
+            PdfEngine.stampDisplayRasters(target, pages, rasters, out)
         }
     }
 
-    /** Rotate the document 90° clockwise and rotate the annotations with it. */
+    /** Rotate the view 90° clockwise — instant, because only one page re-renders. */
     private fun rotateDocument() {
-        val src = source ?: return toast(getString(R.string.msg_pick_file_first))
-        runTask(getString(R.string.msg_processing), onDone = rotated@{ newFile ->
-            if (newFile == null) return@rotated
-            source = newFile
-            pageSizes.clear()
-            pageSizes.addAll(PdfEngine.pageDisplaySizes(newFile))
-            stamps.values.forEach { rotateItems90(it) }
-            goTo(current)
-        }) {
-            val out = Files.newFile(this, "rotated.pdf")
-            PdfEngine.rotatePages(src, null, 90, out)
-            val d = ParcelFileDescriptor.open(out, ParcelFileDescriptor.MODE_READ_ONLY)
-            try { pfd?.close() } catch (_: Exception) { }
-            pfd = d
-            try { renderer?.close() } catch (_: Exception) { }
-            renderer = PageRenderer(PdfRenderer(d))
-            out
-        }
+        viewRotation = (viewRotation + 90) % 360
+        stamps.values.forEach { rotateItems90(it) }
+        renderedWidth.clear()
+        goTo(current)
     }
 
     /** 90° clockwise transform in normalised (display) coordinates. */
@@ -477,12 +501,12 @@ class AnnotateActivity : PdfActivity() {
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menu.add(0, 1, 0, R.string.action_undo).setIcon(R.drawable.ic_undo)
-            .setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM)
+            .setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
         menu.add(0, 2, 1, R.string.action_redo).setIcon(R.drawable.ic_redo)
-            .setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM)
+            .setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
         menu.add(0, 4, 2, R.string.action_rotate).setIcon(R.drawable.ic_rotate)
-            .setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM)
-        menu.add(0, 3, 3, R.string.action_save_as)
+            .setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
+        menu.add(0, 3, 3, R.string.action_save_as).setIcon(R.drawable.ic_save)
             .setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
         return true
     }
@@ -501,5 +525,9 @@ class AnnotateActivity : PdfActivity() {
         super.onDestroy()
         renderer?.close()
         try { pfd?.close() } catch (_: Exception) { }
+    }
+
+    private companion object {
+        const val MAX_WIDTH = 2800
     }
 }

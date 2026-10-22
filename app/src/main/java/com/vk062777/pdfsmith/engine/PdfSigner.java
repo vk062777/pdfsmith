@@ -139,19 +139,27 @@ public final class PdfSigner {
                     CMSSignedData cms = parseCms(contents, signedContent);
                     SignerInformationStore store = cms.getSignerInfos();
                     boolean ok = false;
+                    String verifyError = "";
                     for (SignerInformation si : store.getSigners()) {
                         for (Object o : cms.getCertificates().getMatches(si.getSID())) {
                             X509CertificateHolder holder = (X509CertificateHolder) o;
                             X509Certificate cert = new JcaX509CertificateConverter().getCertificate(holder);
-                            if (si.verify(new JcaSimpleSignerInfoVerifierBuilder().build(cert))) {
-                                ok = true;
+                            // Record who signed even if the digest check later fails.
+                            if (info.subject.isEmpty()) {
                                 info.subject = cert.getSubjectX500Principal().getName();
                                 info.issuer = cert.getIssuerX500Principal().getName();
+                            }
+                            try {
+                                if (si.verify(new JcaSimpleSignerInfoVerifierBuilder().build(cert))) ok = true;
+                            } catch (Exception ex) {
+                                verifyError = ex.getClass().getSimpleName()
+                                        + (ex.getMessage() == null ? "" : ": " + ex.getMessage());
                             }
                         }
                     }
                     info.valid = ok;
-                    if (!ok) info.error = "Signature did not verify against the certificate";
+                    if (!ok) info.error = verifyError.isEmpty()
+                            ? "Signature did not verify against the certificate" : verifyError;
 
                     // ByteRange is [start1, length1, start2, length2]: the signed ranges
                     // must start at 0 and reach the end of the file. The only gap is the

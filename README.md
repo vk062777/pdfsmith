@@ -29,6 +29,26 @@ Package: `com.vk062777.pdfsmith` · Display name: **NovaPDF** · Licence: Apache
   "clear all metadata" action.
 - Smoother scrolling and less memory pressure in the reader and page grid.
 
+
+## What's new in 1.3.0
+
+- **Faster opening** — encryption is now detected by reading the PDF trailer instead
+  of parsing the whole document, so files open immediately.
+- **Password-protected PDFs now open** — the app asks for the password and unlocks
+  the document for viewing, annotating and editing.
+- **Crop page** (Edit category) — drag the corners to trim a page's margins and save
+  it in place, on one page or every page.
+- **Zoom fixed everywhere** — zooming no longer snaps back to the original position,
+  and pages re-render sharper as you zoom instead of going blurry.
+- **Annotate rotate is instant** and the toolbar actions (undo, redo, rotate, save)
+  are proper icons.
+- **Split** can now make one file per page; **Extract images** can be limited to a
+  page range; **page numbers** gained an opacity option.
+- **Watermark** moved to the Organise category; the redundant Rotate tool was removed.
+- **New logo** built from the supplied green artwork.
+- Rounder corners, tooltips on every icon button, proper chevron/share icons, and
+  security hardening (no backups, cache cleaned automatically, no cleartext traffic).
+
 ## Features
 
 | Tool | What it does |
@@ -81,18 +101,19 @@ first). Keep the keystore safe — it is the app's permanent identity.
 The document engine is verified independently of the UI. `tools/verify-engine.sh`
 compiles the **real** engine source against the **real** `pdfbox-android` library on a
 plain JVM (with tiny stubs for the handful of `android.*` classes the engine touches)
-and runs **72 behavioural assertions**: merge, split, reorder, rotate, delete,
+and runs **80 behavioural assertions**: merge, split, reorder, rotate, delete,
 text/image stamping, watermark (centred, random, multiple fonts/colours), page
 numbers, encryption, decryption (owner-only and user-password), compression
 (asserting a real size reduction), metadata, images-to-PDF (single and multi-image),
-image extraction, form filling, PDF creation, extended metadata, and digital signing/verification (including a tamper-detection test).
+image extraction, form filling, PDF creation, extended metadata, and digital signing/verification (including a tamper-detection test), page cropping, and page-range extraction.
 
 ```bash
 bash tools/verify-engine.sh
 ```
 
-It then renders the rotated output PDFs and **pixel-checks** them with PyMuPDF, so
-rotation-aware overlay placement is verified visually rather than assumed.
+It then renders the rotated and cropped output PDFs and **pixel-checks** them with
+PyMuPDF, so rotation-aware overlay placement and cropping are verified visually
+rather than assumed.
 
 This runs automatically on every push in GitHub Actions, before the APK is built.
 
@@ -100,7 +121,7 @@ This runs automatically on every push in GitHub Actions, before the APK is built
 
 `.github/workflows/android.yml` runs on every push to `main`:
 
-1. verifies the engine (72 checks + rendered rotation checks),
+1. verifies the engine (80 checks + rendered rotation/crop checks),
 2. builds a **signed** release APK,
 3. uploads it as a build artifact and attaches it to a GitHub Release.
 

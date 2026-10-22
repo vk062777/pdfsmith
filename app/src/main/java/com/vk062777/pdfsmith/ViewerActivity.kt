@@ -39,15 +39,10 @@ class ViewerActivity : PdfActivity() {
     override fun onPdfChosen(uri: Uri) = openUri(uri)
 
     private fun openUri(uri: Uri) {
-        runTask(getString(R.string.msg_processing), onDone = opened@{ f ->
-            if (f == null) return@opened
+        openPdf(uri) { f ->
             current = f
             binding.toolbar.title = Files.displayName(this, uri)
             show(f)
-        }) {
-            val f = Files.copyToCache(this, uri)
-            if (PdfEngine.needsPassword(f)) error(getString(R.string.msg_needs_password))
-            f
         }
     }
 
@@ -94,10 +89,10 @@ class ViewerActivity : PdfActivity() {
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menu.add(0, 1, 0, R.string.action_rotate)
             .setIcon(R.drawable.ic_rotate)
-            .setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM)
+            .setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
         menu.add(0, 2, 1, R.string.action_share)
             .setIcon(R.drawable.ic_share)
-            .setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM)
+            .setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
         return true
     }
 
@@ -116,8 +111,8 @@ class ViewerActivity : PdfActivity() {
     }
 
     companion object {
-        private const val BASE_FACTOR = 1.75f
+        private const val BASE_FACTOR = 2.0f
         private const val MAX_FACTOR = 4.0f
-        private const val MAX_WIDTH = 3200
+        private const val MAX_WIDTH = 2800
     }
 }

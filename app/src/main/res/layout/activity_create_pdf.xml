@@ -303,7 +303,7 @@
             android:layout_height="40dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="@string/action_move_up"
-            android:src="@drawable/ic_back"
+            android:src="@drawable/ic_chevron_left"
             app:tint="@color/text_primary" />
 
         <TextView
@@ -322,8 +322,7 @@
             android:layout_height="40dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="@string/action_move_down"
-            android:rotation="180"
-            android:src="@drawable/ic_back"
+            android:src="@drawable/ic_chevron_right"
             app:tint="@color/text_primary" />
 
         <ImageButton

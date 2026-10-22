@@ -329,6 +329,33 @@ public class TestEngine {
     } catch (Exception e) { tamperCaught = true; }
     check("tampered document fails verification", tamperCaught);
 
+
+    System.out.println("== crop ==");
+    File cropOut = new File(W, "cropout.pdf");
+    PdfEngine.cropPages(a, 1, 10f, 20f, 300f, 400f, false, cropOut);
+    float[] cs = PdfEngine.pageDisplaySizes(cropOut).get(0);
+    check("crop page1 to 300x400", Math.abs(cs[0] - 300f) < 2f && Math.abs(cs[1] - 400f) < 2f);
+    check("crop keeps page count", PdfEngine.pageCount(cropOut) == 3);
+    float[] cs2 = PdfEngine.pageDisplaySizes(cropOut).get(1);
+    check("crop leaves other pages", Math.abs(cs2[0] - 595f) < 3f);
+    File cropAll = new File(W, "cropall.pdf");
+    PdfEngine.cropPages(a, 1, 0f, 0f, 500f, 700f, true, cropAll);
+    check("crop all pages", PdfEngine.pageDisplaySizes(cropAll).get(2)[0] < 510f);
+
+    System.out.println("== extract images by range ==");
+    File exRangeDir = new File(W, "exrange");
+    exRangeDir.mkdirs();
+    List<File> exAll = PdfEngine.extractImages(a, exRangeDir);
+    List<File> exOne = PdfEngine.extractImages(a, exRangeDir, Arrays.asList(1));
+    check("extract all images", exAll.size() >= 1);
+    check("extract one page <= all", exOne.size() <= exAll.size());
+
+    System.out.println("== page numbers with opacity ==");
+    File pnOpaque = new File(W, "pnopaque.pdf");
+    PdfEngine.addPageNumbers(a, "P{n}", 10f, 0xFF333333, 0.4f, pnOpaque);
+    check("page numbers with opacity valid", PdfEngine.pageCount(pnOpaque) == 3);
+    check("page number text present", textOf(pnOpaque, 1).replaceAll("\\s+", "").contains("P1"));
+
     System.out.println();
     System.out.println("TOTAL: " + pass + " passed, " + fail + " failed");
     if (fail > 0) System.exit(1);

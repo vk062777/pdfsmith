@@ -39,8 +39,6 @@ class ToolsActivity : PdfActivity() {
             0xFFF08C00.toInt(), 0xFF7048E8.toInt(), 0xFF868E96.toInt()
         )
         private val LEVEL_NAMES = listOf("Light — best quality", "Balanced", "Strong — smallest file")
-        private val ANGLE_NAMES = listOf("90° clockwise", "180°", "270° (90° anticlockwise)")
-        private val ANGLE_VALUES = intArrayOf(90, 180, 270)
     }
 
     private lateinit var binding: ActivityToolsBinding
@@ -74,7 +72,9 @@ class ToolsActivity : PdfActivity() {
     private var fColourSpinner: Spinner? = null
     private var fRandom: SwitchMaterial? = null
     private var fLevelSpinner: Spinner? = null
-    private var fAngleSpinner: Spinner? = null
+    private var fPagenumOpacity: EditText? = null
+    private var fSplitAll: SwitchMaterial? = null
+    private var fExtractPages: EditText? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -95,7 +95,6 @@ class ToolsActivity : PdfActivity() {
 
     private fun applyToolChrome() {
         val (title, desc) = when (tool) {
-            Action.ROTATE -> R.string.tool_rotate to R.string.tool_rotate_desc
             Action.COMPRESS -> R.string.tool_compress to R.string.tool_compress_desc
             Action.WATERMARK -> R.string.tool_watermark to R.string.tool_watermark_desc
             Action.PROTECT -> R.string.tool_protect to R.string.tool_protect_desc
@@ -114,20 +113,26 @@ class ToolsActivity : PdfActivity() {
 
     override fun onPdfChosen(uri: Uri) {
         sourceName = Files.displayName(this, uri)
-        runTask(getString(R.string.msg_processing), onDone = loaded@{ meta ->
-            binding.fileName.text = sourceName
-            buildParams(meta ?: emptyMap())
-            binding.btnRun.isEnabled = true
-        }) {
-            val f = Files.copyToCache(this, uri)
-            if (tool != Action.UNLOCK && tool != Action.VERIFY && PdfEngine.needsPassword(f)) {
-                error(getString(R.string.msg_needs_password))
+        if (tool == Action.UNLOCK) {
+            // Unlock needs the raw, still-encrypted file.
+            runTask(getString(R.string.msg_processing), onDone = loaded@{ _ ->
+                binding.fileName.text = sourceName
+                buildParams(emptyMap())
+                binding.btnRun.isEnabled = true
+            }) {
+                source = Files.copyToCache(this, uri)
+                Unit
             }
-            source = f
-            if (tool == Action.METADATA && !PdfEngine.needsPassword(f)) {
-                PdfEngine.getMetadata(f)
-            } else {
-                emptyMap<String, String>()
+            return
+        }
+        openPdf(uri) { f ->
+            runTask(getString(R.string.msg_processing), onDone = loaded@{ meta ->
+                binding.fileName.text = sourceName
+                buildParams(meta ?: emptyMap())
+                binding.btnRun.isEnabled = true
+            }) {
+                source = f
+                if (tool == Action.METADATA) PdfEngine.getMetadata(f) else emptyMap<String, String>()
             }
         }
     }
@@ -196,12 +201,10 @@ class ToolsActivity : PdfActivity() {
         fTitle = null; fAuthor = null; fSubject = null; fKeywords = null
         fCreator = null; fProducer = null; fCreated = null; fModified = null
         fSignName = null; fSignOrg = null; fSignReason = null; fSignLocation = null; fSignContact = null
-        fFontSpinner = null; fColourSpinner = null; fRandom = null; fLevelSpinner = null; fAngleSpinner = null
+        fFontSpinner = null; fColourSpinner = null; fRandom = null; fLevelSpinner = null
+        fPagenumOpacity = null; fSplitAll = null; fExtractPages = null
 
         when (tool) {
-            Action.ROTATE -> {
-                fAngleSpinner = addSpinner(getString(R.string.hint_angle), ANGLE_NAMES, 0)
-            }
             Action.WATERMARK -> {
                 fText = addField(getString(R.string.hint_watermark_text))
                 fFontSpinner = addSpinner(getString(R.string.label_font), FONT_NAMES, 1)
@@ -247,13 +250,19 @@ class ToolsActivity : PdfActivity() {
             Action.PAGENUM -> {
                 fFormat = addField(getString(R.string.hint_page_format), InputType.TYPE_CLASS_TEXT, "Page {n} of {total}")
                 fFont = addField(getString(R.string.hint_font_size), InputType.TYPE_CLASS_NUMBER, "10")
+                fPagenumOpacity = addField(
+                    getString(R.string.hint_opacity),
+                    InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL, "1.0"
+                )
             }
             Action.SPLIT -> {
+                fSplitAll = addSwitch(getString(R.string.split_all_pages), false)
                 fRanges = addField(getString(R.string.hint_ranges), InputType.TYPE_CLASS_TEXT, "1-3, 4-6")
                 binding.outputHint.visibility = View.VISIBLE
                 binding.outputHint.text = "Choose a folder, then Run."
             }
             Action.EXTRACT -> {
+                fExtractPages = addField(getString(R.string.hint_extract_pages), InputType.TYPE_CLASS_TEXT, "")
                 binding.outputHint.visibility = View.VISIBLE
                 binding.outputHint.text = "Choose a folder, then Run."
             }
@@ -265,10 +274,6 @@ class ToolsActivity : PdfActivity() {
 
     private fun onRun() {
         when (tool) {
-            Action.ROTATE -> {
-                val angle = ANGLE_VALUES[(fAngleSpinner?.selectedItemPosition ?: 0).coerceIn(0, 2)]
-                single { PdfEngine.rotatePages(it.first, null, angle, it.second) }
-            }
             Action.COMPRESS -> {
                 val level = fLevelSpinner?.selectedItemPosition ?: 1
                 single { PdfEngine.compress(it.first, it.second, level) }
@@ -331,20 +336,31 @@ class ToolsActivity : PdfActivity() {
             Action.PAGENUM -> {
                 val fmt = fFormat?.text?.toString()?.ifBlank { "Page {n} of {total}" } ?: "Page {n} of {total}"
                 val size = fFont?.text?.toString()?.toFloatOrNull() ?: 10f
-                single { PdfEngine.addPageNumbers(it.first, fmt, size, 0xFF333333.toInt(), it.second) }
+                val op = (fPagenumOpacity?.text?.toString()?.toFloatOrNull() ?: 1f).coerceIn(0.05f, 1f)
+                single { PdfEngine.addPageNumbers(it.first, fmt, size, 0xFF333333.toInt(), op, it.second) }
             }
             Action.EXTRACT -> {
                 val src = source ?: return toast(getString(R.string.msg_pick_file_first))
                 if (treeUri == null) { pendingRun = true; pickTree(); return }
-                multi { dir -> PdfEngine.extractImages(src, dir) }
+                val pageList = parseRanges(fExtractPages?.text?.toString().orEmpty())
+                    .flatMap { r -> (r[0]..r[1]).toList() }
+                    .distinct().sorted()
+                multi { dir -> PdfEngine.extractImages(src, dir, pageList.ifEmpty { null }) }
             }
             Action.SPLIT -> {
                 val src = source ?: return toast(getString(R.string.msg_pick_file_first))
+                val allPages = fSplitAll?.isChecked == true
                 val ranges = parseRanges(fRanges?.text?.toString().orEmpty())
-                if (ranges.isEmpty()) return toast(getString(R.string.msg_invalid_ranges))
+                if (!allPages && ranges.isEmpty()) return toast(getString(R.string.msg_invalid_ranges))
                 if (treeUri == null) { pendingRun = true; pickTree(); return }
                 val base = Files.baseName(sourceName)
-                multi { dir -> PdfEngine.splitToFiles(src, ranges, dir, base) }
+                multi { dir ->
+                    val use = if (allPages) {
+                        val n = PdfEngine.pageCount(src)
+                        (1..n).map { intArrayOf(it, it) }
+                    } else ranges
+                    PdfEngine.splitToFiles(src, use, dir, base)
+                }
             }
             else -> { }
         }
@@ -363,13 +379,15 @@ class ToolsActivity : PdfActivity() {
                     if (s.reason.isNotEmpty()) append("Reason: ").append(s.reason).append("\n")
                     if (s.location.isNotEmpty()) append("Location: ").append(s.location).append("\n")
                     append("Certificate: ").append(s.subject.ifEmpty { "—" }).append("\n")
+                    val whole = s.valid && s.coversWholeDocument
                     append("Status: ").append(
-                        if (s.valid && s.coversWholeDocument) getString(R.string.msg_sig_valid)
+                        if (whole) getString(R.string.msg_sig_valid)
                         else if (!s.valid) getString(R.string.msg_sig_invalid)
                         else getString(R.string.msg_sig_partial)
                     )
-                    append("\n").append(getString(R.string.msg_sig_selfsigned))
-                    if (s.error.isNotEmpty()) append("\n").append(s.error)
+                    // Only reassure about the certificate when the signature actually holds.
+                    if (whole) append("\n").append(getString(R.string.msg_sig_selfsigned))
+                    if (!whole && s.error.isNotEmpty()) append("\n").append(s.error)
                 }
             }
         }
@@ -408,7 +426,6 @@ class ToolsActivity : PdfActivity() {
     }
 
     private fun suffixFor(tool: Action) = when (tool) {
-        Action.ROTATE -> "_rotated"
         Action.COMPRESS -> "_compressed"
         Action.WATERMARK -> "_watermarked"
         Action.PROTECT -> "_protected"

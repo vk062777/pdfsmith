@@ -134,12 +134,75 @@ public final class PdfEngine {
         }
     }
 
-    /** True only when the file cannot be opened without a password. */
+    /**
+     * True only when the file cannot be opened without a password.
+     *
+     * <p>A PDF that is not encrypted never mentions /Encrypt in its trailer, so the
+     * common case is answered by reading the last few KB instead of parsing the whole
+     * document — which is what makes opening files feel instant.</p>
+     */
     public static boolean needsPassword(File f) {
+        if (!trailerMentionsEncrypt(f)) return false;
         try (PDDocument d = PDDocument.load(f)) {
             return false;
         } catch (Exception e) {
             return true;
+        }
+    }
+
+    private static boolean trailerMentionsEncrypt(File f) {
+        try (java.io.RandomAccessFile raf = new java.io.RandomAccessFile(f, "r")) {
+            long len = raf.length();
+            int n = (int) Math.min(8192L, len);
+            byte[] buf = new byte[n];
+            raf.seek(len - n);
+            raf.readFully(buf);
+            return new String(buf, java.nio.charset.StandardCharsets.ISO_8859_1).contains("/Encrypt");
+        } catch (Exception e) {
+            return true; // be conservative
+        }
+    }
+
+    /**
+     * Crop one page (or every page) to a rectangle expressed in the page's
+     * <em>displayed</em> frame: origin at the top-left, y downwards, in points.
+     */
+    public static void cropPages(File src, int page1based, float dx, float dy, float dw, float dh,
+                                 boolean allPages, File out) throws Exception {
+        try (PDDocument d = open(src)) {
+            int total = d.getNumberOfPages();
+            for (int i = 0; i < total; i++) {
+                if (!allPages && i != page1based - 1) continue;
+                PDPage page = d.getPage(i);
+                PDRectangle box = page.getCropBox();
+                float w = box.getWidth(), h = box.getHeight();
+                int r = ((page.getRotation() % 360) + 360) % 360;
+
+                float[][] corners = {{dx, dy}, {dx + dw, dy}, {dx, dy + dh}, {dx + dw, dy + dh}};
+                float minX = Float.MAX_VALUE, minY = Float.MAX_VALUE;
+                float maxX = -Float.MAX_VALUE, maxY = -Float.MAX_VALUE;
+                for (float[] c : corners) {
+                    float xd = c[0], yd = c[1];
+                    float px, py;
+                    switch (r) {
+                        case 90:  px = yd;      py = xd;      break;
+                        case 180: px = w - xd;  py = yd;      break;
+                        case 270: px = w - yd;  py = h - xd;  break;
+                        default:  px = xd;      py = h - yd;  break;
+                    }
+                    minX = Math.min(minX, px); maxX = Math.max(maxX, px);
+                    minY = Math.min(minY, py); maxY = Math.max(maxY, py);
+                }
+                minX = Math.max(box.getLowerLeftX(), minX);
+                minY = Math.max(box.getLowerLeftY(), minY);
+                maxX = Math.min(box.getUpperRightX(), maxX);
+                maxY = Math.min(box.getUpperRightY(), maxY);
+                if (maxX - minX < 12f || maxY - minY < 12f) continue;
+                PDRectangle crop = new PDRectangle(minX, minY, maxX - minX, maxY - minY);
+                page.setCropBox(crop);
+                page.setMediaBox(crop);
+            }
+            d.save(out);
         }
     }
 
@@ -475,8 +538,14 @@ public final class PdfEngine {
     // ---------------------------------------------------------------------
 
     public static void addPageNumbers(File src, String format, float fontSize, int argbColor, File out) throws Exception {
+        addPageNumbers(src, format, fontSize, argbColor, 1f, out);
+    }
+
+    public static void addPageNumbers(File src, String format, float fontSize, int argbColor,
+                                      float opacity, File out) throws Exception {
         try (PDDocument d = open(src)) {
             int total = d.getNumberOfPages();
+            float alpha = Math.max(0.05f, Math.min(1f, opacity));
             for (int i = 0; i < total; i++) {
                 PDPage page = d.getPage(i);
                 PDRectangle box = page.getCropBox();
@@ -487,6 +556,11 @@ public final class PdfEngine {
                 float x = box.getLowerLeftX() + (box.getWidth() - w) / 2f;
                 float y = box.getLowerLeftY() + 24f;
                 try (PDPageContentStream cs = new PDPageContentStream(d, page, AppendMode.APPEND, true, true)) {
+                    if (alpha < 1f) {
+                        PDExtendedGraphicsState gs = new PDExtendedGraphicsState();
+                        gs.setNonStrokingAlphaConstant(alpha);
+                        cs.setGraphicsStateParameters(gs);
+                    }
                     cs.beginText();
                     cs.setFont(PDType1Font.HELVETICA, size);
                     cs.setNonStrokingColor((argbColor >> 16) & 0xFF, (argbColor >> 8) & 0xFF, argbColor & 0xFF);
@@ -856,11 +930,19 @@ public final class PdfEngine {
     }
 
     public static List<File> extractImages(File src, File outDir) throws Exception {
+        return extractImages(src, outDir, null);
+    }
+
+    /** Extract images, optionally limited to a set of 1-based pages (null = all pages). */
+    public static List<File> extractImages(File src, File outDir, List<Integer> pages1based) throws Exception {
         List<File> written = new ArrayList<>();
         try (PDDocument d = open(src)) {
             IdentityHashMap<COSBase, Boolean> seen = new IdentityHashMap<>();
             int n = 0;
+            int index = 0;
             for (PDPage page : d.getPages()) {
+                index++;
+                if (pages1based != null && !pages1based.contains(index)) continue;
                 PDResources res = page.getResources();
                 if (res == null) continue;
                 for (COSName name : res.getXObjectNames()) {

@@ -14,6 +14,20 @@ class PdfSmithApp : Application() {
             else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
         })
         PDFBoxResourceLoader.init(applicationContext)
+        cleanStaleCache()
+    }
+
+    /** Documents are copied to the cache while they are worked on; drop old ones so
+     *  nothing lingers on the device longer than it needs to. */
+    private fun cleanStaleCache() {
+        Thread {
+            try {
+                val dir = java.io.File(cacheDir, "work")
+                val cutoff = System.currentTimeMillis() - 6L * 3600_000L
+                dir.listFiles()?.forEach { if (it.lastModified() < cutoff) it.delete() }
+            } catch (_: Exception) {
+            }
+        }.start()
     }
 
     companion object {

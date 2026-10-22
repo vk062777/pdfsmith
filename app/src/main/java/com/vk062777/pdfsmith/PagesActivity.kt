@@ -86,22 +86,23 @@ class PagesActivity : PdfActivity() {
 
     override fun onPdfChosen(uri: Uri) {
         sourceName = Files.displayName(this, uri)
-        runTask(getString(R.string.msg_processing), onDone = loaded@{ count ->
-            if (count == null) return@loaded
-            items.clear()
-            for (i in 1..count) items.add(PageEntry(i))
-            adapter = PageThumbAdapter(items, renderer!!, lifecycleScope) { pos -> toggle(pos) }
-            binding.recycler.adapter = adapter
-            updateInfo()
-        }) {
-            val f = Files.copyToCache(this, uri)
-            if (PdfEngine.needsPassword(f)) error(getString(R.string.msg_needs_password))
-            source = f
-            val d = ParcelFileDescriptor.open(f, ParcelFileDescriptor.MODE_READ_ONLY)
-            pfd = d
-            val r = PdfRenderer(d)
-            renderer = PageRenderer(r)
-            r.pageCount
+        openPdf(uri) { f ->
+            binding.toolbar.title = Files.baseName(sourceName)
+            runTask(getString(R.string.msg_processing), onDone = loaded@{ count ->
+                if (count == null) return@loaded
+                items.clear()
+                for (i in 1..count) items.add(PageEntry(i))
+                adapter = PageThumbAdapter(items, renderer!!, lifecycleScope) { pos -> toggle(pos) }
+                binding.recycler.adapter = adapter
+                updateInfo()
+            }) {
+                source = f
+                val d = ParcelFileDescriptor.open(f, ParcelFileDescriptor.MODE_READ_ONLY)
+                pfd = d
+                val r = PdfRenderer(d)
+                renderer = PageRenderer(r)
+                r.pageCount
+            }
         }
     }
 

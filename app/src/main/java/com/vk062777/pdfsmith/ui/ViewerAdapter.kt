@@ -12,9 +12,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * Pages of the reader. Bitmaps are cached by size (so memory stays bounded no matter
- * how large the supersampled render is) and re-rendered at higher resolution on demand
- * when the user zooms in, which is what keeps text crisp.
+ * Pages of the reader. Bitmaps are cached by size (memory stays bounded no matter how
+ * large the document is), and zooming re-renders the current page at higher resolution
+ * and swaps it in **without** rebinding, so the zoom and pan are never lost.
  */
 class ViewerAdapter(
     private val pageCount: Int,
@@ -31,6 +31,7 @@ class ViewerAdapter(
     }
     private val renderedWidth = HashMap<Int, Int>()
     private val inFlight = HashSet<Int>()
+    private val holders = HashMap<Int, VH>()
 
     class VH(val b: ItemPageBinding) : RecyclerView.ViewHolder(b.root) {
         var boundPosition = -1
@@ -47,64 +48,68 @@ class ViewerAdapter(
         iv.onZoomSettled = { z -> onZoomSettled(position, z) }
         val samePage = holder.boundPosition == position
         holder.boundPosition = position
+        holders[position] = holder
 
         val cached = cache.get(position)
         if (cached != null) {
-            if (samePage) iv.setImageBitmapPreservingTransform(cached) else iv.setImageBitmap(cached)
+            if (samePage) iv.setImageBitmapPreservingTransform(cached)
+            else iv.setImageBitmap(cached)
             return
         }
-        if (!samePage) iv.setImageBitmap(null)
+        iv.setImageBitmap(null)
         renderInto(position, baseWidthProvider()) { bmp ->
             if (bmp == null) return@renderInto
-            if (holder.bindingAdapterPosition != position) return@renderInto
+            cache.put(position, bmp)
             if (holder.boundPosition == position) {
-                iv.setImageBitmapPreservingTransform(bmp)
-            } else {
                 iv.setImageBitmap(bmp)
-                iv.alpha = 0.25f
-                iv.animate().alpha(1f).setDuration(160).start()
+                iv.alpha = 0.3f
+                iv.animate().alpha(1f).setDuration(150).start()
             }
         }
     }
 
-    /** Render (if needed) at least [targetWidth] px wide and refresh that page. */
+    override fun onViewRecycled(holder: VH) {
+        if (holder.boundPosition >= 0) holders.remove(holder.boundPosition)
+        holder.boundPosition = -1
+        holder.b.pageImage.setImageBitmap(null)
+    }
+
+    /** Re-render a page at a higher resolution and swap it in without losing the zoom. */
     fun upgradePage(position: Int, targetWidth: Int) {
-        val current = renderedWidth[position] ?: 0
-        if (current >= targetWidth) return
+        val rendered = renderedWidth[position] ?: 0
+        if (rendered >= targetWidth) return
+        if (!inFlight.add(position)) return
         renderInto(position, targetWidth) { bmp ->
-            if (bmp != null) notifyItemChanged(position)
-        }
-    }
-
-    private fun renderInto(position: Int, width: Int, onReady: (Bitmap?) -> Unit) {
-        if (inFlight.contains(position)) return
-        inFlight.add(position)
-        val rot = rotationProvider()
-        scope.launch {
-            val bmp = withContext(Dispatchers.IO) {
-                runCatching { renderer.render(position, width, rot) }.getOrNull()
-            }
             inFlight.remove(position)
             if (bmp != null) {
                 cache.put(position, bmp)
-                renderedWidth[position] = width
+                renderedWidth[position] = targetWidth
+                val h = holders[position]
+                if (h != null && h.boundPosition == position) {
+                    h.b.pageImage.setImageBitmapPreservingTransform(bmp)
+                }
             }
-            onReady(bmp)
         }
     }
 
     fun invalidateAll() {
         cache.evictAll()
         renderedWidth.clear()
+        inFlight.clear()
         notifyDataSetChanged()
     }
 
-    override fun onViewRecycled(holder: VH) {
-        holder.boundPosition = -1
-        holder.b.pageImage.setImageBitmap(null)
+    private fun renderInto(position: Int, width: Int, onReady: (Bitmap?) -> Unit) {
+        val rot = rotationProvider()
+        scope.launch {
+            val bmp = withContext(Dispatchers.IO) {
+                runCatching { renderer.render(position, width, rot) }.getOrNull()
+            }
+            onReady(bmp)
+        }
     }
 
-    companion object {
-        private const val MAX_CACHE_BYTES = 96 * 1024 * 1024
+    private companion object {
+        const val MAX_CACHE_BYTES = 72 * 1024 * 1024
     }
 }

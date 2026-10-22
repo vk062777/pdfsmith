@@ -75,6 +75,57 @@ abstract class PdfActivity : AppCompatActivity() {
         busy = Busy(this)
     }
 
+    /**
+     * Copy the picked PDF into the cache, asking for a password when the document is
+     * protected. [onReady] always receives a file that can actually be opened.
+     */
+    protected fun openPdf(uri: Uri, onReady: (File) -> Unit) {
+        runTask(getString(R.string.msg_processing), onDone = checked@{ res ->
+            if (res == null) return@checked
+            if (!res.second) { onReady(res.first); return@checked }
+            askPassword(res.first, onReady)
+        }) {
+            val f = Files.copyToCache(this, uri)
+            f to com.vk062777.pdfsmith.engine.PdfEngine.needsPassword(f)
+        }
+    }
+
+    private fun askPassword(file: File, onReady: (File) -> Unit) {
+        val v = layoutInflater.inflate(R.layout.dialog_password, null)
+        val input = v.findViewById<android.widget.EditText>(R.id.pwInput)
+        val dialog = AlertDialog.Builder(this)
+            .setTitle(R.string.msg_password_required)
+            .setView(v)
+            .setPositiveButton(R.string.action_open, null)
+            .setNegativeButton(R.string.action_cancel, null)
+            .create()
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val pw = input.text?.toString().orEmpty()
+                if (pw.isEmpty()) {
+                    toast(getString(R.string.msg_enter_password))
+                    return@setOnClickListener
+                }
+                dialog.dismiss()
+                runTask(getString(R.string.msg_processing), onDone = opened@{ out ->
+                    if (out != null) {
+                        toast(getString(R.string.msg_unlocked_note))
+                        onReady(out)
+                    }
+                }) {
+                    val dec = Files.newFile(this, "unlocked.pdf")
+                    try {
+                        com.vk062777.pdfsmith.engine.PdfEngine.decrypt(file, pw, dec)
+                    } catch (e: Exception) {
+                        error(getString(R.string.msg_wrong_password))
+                    }
+                    dec
+                }
+            }
+        }
+        dialog.show()
+    }
+
     /** A friendly "all done" popup with Open / Share / Close. */
     protected fun showSuccess(message: String, file: File?, mime: String = "application/pdf") {
         val view = layoutInflater.inflate(R.layout.dialog_success, null)

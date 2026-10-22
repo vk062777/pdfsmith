@@ -95,6 +95,7 @@ class MainActivity : AppCompatActivity() {
             Action.MERGE -> Intent(this, MergeActivity::class.java)
             Action.IMAGES_PDF -> Intent(this, ImagesToPdfActivity::class.java)
             Action.CREATE_PDF -> Intent(this, CreatePdfActivity::class.java)
+            Action.CROP -> Intent(this, CropActivity::class.java)
             else -> Intent(this, ToolsActivity::class.java)
                 .putExtra(ToolsActivity.EXTRA_TOOL, action.name)
         }
@@ -110,12 +111,13 @@ class MainActivity : AppCompatActivity() {
         add(HomeRow.Tool(ToolItem(R.string.tool_view, R.string.tool_view_desc, R.drawable.ic_view, Action.VIEW)))
         add(HomeRow.Tool(ToolItem(R.string.tool_annotate, R.string.tool_annotate_desc, R.drawable.ic_annotate, Action.ANNOTATE)))
         add(HomeRow.Tool(ToolItem(R.string.tool_forms, R.string.tool_forms_desc, R.drawable.ic_forms, Action.FORMS)))
+        add(HomeRow.Tool(ToolItem(R.string.tool_crop, R.string.tool_crop_desc, R.drawable.ic_crop, Action.CROP)))
 
         add(HomeRow.Header(R.string.section_organize))
         add(HomeRow.Tool(ToolItem(R.string.tool_pages, R.string.tool_pages_desc, R.drawable.ic_pages, Action.PAGES)))
-        add(HomeRow.Tool(ToolItem(R.string.tool_rotate, R.string.tool_rotate_desc, R.drawable.ic_rotate, Action.ROTATE)))
         add(HomeRow.Tool(ToolItem(R.string.tool_merge, R.string.tool_merge_desc, R.drawable.ic_merge, Action.MERGE)))
         add(HomeRow.Tool(ToolItem(R.string.tool_split, R.string.tool_split_desc, R.drawable.ic_split, Action.SPLIT)))
+        add(HomeRow.Tool(ToolItem(R.string.tool_watermark, R.string.tool_watermark_desc, R.drawable.ic_watermark, Action.WATERMARK)))
 
         add(HomeRow.Header(R.string.section_security))
         add(HomeRow.Tool(ToolItem(R.string.tool_sign, R.string.tool_sign_desc, R.drawable.ic_sign, Action.SIGN)))
@@ -125,7 +127,6 @@ class MainActivity : AppCompatActivity() {
 
         add(HomeRow.Header(R.string.section_output))
         add(HomeRow.Tool(ToolItem(R.string.tool_compress, R.string.tool_compress_desc, R.drawable.ic_compress, Action.COMPRESS)))
-        add(HomeRow.Tool(ToolItem(R.string.tool_watermark, R.string.tool_watermark_desc, R.drawable.ic_watermark, Action.WATERMARK)))
         add(HomeRow.Tool(ToolItem(R.string.tool_metadata, R.string.tool_metadata_desc, R.drawable.ic_metadata, Action.METADATA)))
         add(HomeRow.Tool(ToolItem(R.string.tool_extract, R.string.tool_extract_desc, R.drawable.ic_extract, Action.EXTRACT)))
         add(HomeRow.Tool(ToolItem(R.string.tool_pagenum, R.string.tool_pagenum_desc, R.drawable.ic_pagenum, Action.PAGENUM)))
