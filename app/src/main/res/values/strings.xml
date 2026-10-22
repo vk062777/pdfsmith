@@ -196,6 +196,5 @@
     <string name="tool_crop_desc">Trim a page&#8217;s margins and save it in place</string>
     <string name="crop_apply_all">Apply to every page</string>
     <string name="crop_hint">Drag the corners to choose the area to keep.</string>
-    <string name="action_reset">Reset</string>
-    <string name="msg_crop_too_small">The crop area is too small</string>
+        <string name="msg_crop_too_small">The crop area is too small</string>
 </resources>
