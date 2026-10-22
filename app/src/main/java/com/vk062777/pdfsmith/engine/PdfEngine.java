@@ -170,6 +170,55 @@ public final class PdfEngine {
         return out;
     }
 
+    /** Page sizes as they appear on screen, i.e. taking /Rotate into account. */
+    public static List<float[]> pageDisplaySizes(File f) throws Exception {
+        List<float[]> out = new ArrayList<>();
+        try (PDDocument d = open(f)) {
+            for (PDPage p : d.getPages()) {
+                PDRectangle r = p.getCropBox();
+                int rot = ((p.getRotation() % 360) + 360) % 360;
+                if (rot == 90 || rot == 270) out.add(new float[]{r.getHeight(), r.getWidth()});
+                else out.add(new float[]{r.getWidth(), r.getHeight()});
+            }
+        }
+        return out;
+    }
+
+    /**
+     * Stamp a transparent overlay that was produced in the page's <em>displayed</em>
+     * frame (after /Rotate) onto each page, so annotations land where the user saw them.
+     */
+    public static void stampDisplayRasters(File src, List<Integer> pages1based,
+                                          List<File> rasters, File out) throws Exception {
+        try (PDDocument d = open(src)) {
+            for (int i = 0; i < pages1based.size(); i++) {
+                File raster = rasters.get(i);
+                if (raster == null || !raster.exists()) continue;
+                PDPage page = d.getPage(pages1based.get(i) - 1);
+                PDRectangle box = page.getCropBox();
+                float w = box.getWidth(), h = box.getHeight();
+                int rot = ((page.getRotation() % 360) + 360) % 360;
+                float wd = (rot == 90 || rot == 270) ? h : w;
+                float hd = (rot == 90 || rot == 270) ? w : h;
+                PDImageXObject img = PDImageXObject.createFromFile(raster.getAbsolutePath(), d);
+                Matrix m;
+                switch (rot) {
+                    case 90:  m = new Matrix(0, 1, -1, 0, w, 0); break;
+                    case 180: m = new Matrix(-1, 0, 0, -1, w, h); break;
+                    case 270: m = new Matrix(0, -1, 1, 0, 0, h); break;
+                    default:  m = new Matrix(1, 0, 0, 1, 0, 0); break;
+                }
+                try (PDPageContentStream cs = new PDPageContentStream(d, page, AppendMode.APPEND, true, true)) {
+                    cs.saveGraphicsState();
+                    cs.transform(m);
+                    cs.drawImage(img, 0, 0, wd, hd);
+                    cs.restoreGraphicsState();
+                }
+            }
+            d.save(out);
+        }
+    }
+
     // ---------------------------------------------------------------------
     // Merge
     // ---------------------------------------------------------------------
@@ -567,6 +616,16 @@ public final class PdfEngine {
     // Metadata
     // ---------------------------------------------------------------------
 
+    /** All editable document properties. */
+    public static final class MetadataInfo {
+        public String title, author, subject, keywords, creator, producer;
+        /** yyyy-MM-dd HH:mm, or null to leave unchanged. */
+        public String creationDate, modDate;
+    }
+
+    private static final java.text.SimpleDateFormat META_DATE =
+            new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.US);
+
     public static Map<String, String> getMetadata(File src) throws Exception {
         Map<String, String> m = new LinkedHashMap<>();
         try (PDDocument d = open(src)) {
@@ -577,21 +636,47 @@ public final class PdfEngine {
             m.put("keywords", nullToEmpty(info.getKeywords()));
             m.put("creator", nullToEmpty(info.getCreator()));
             m.put("producer", nullToEmpty(info.getProducer()));
+            m.put("creationDate", info.getCreationDate() == null ? "" : META_DATE.format(info.getCreationDate().getTime()));
+            m.put("modDate", info.getModificationDate() == null ? "" : META_DATE.format(info.getModificationDate().getTime()));
             m.put("pages", String.valueOf(d.getNumberOfPages()));
         }
         return m;
     }
 
-    public static void setMetadata(File src, String title, String author, String subject,
-                                   String keywords, String creator, File out) throws Exception {
+    public static void setMetadata(File src, MetadataInfo in, File out) throws Exception {
         try (PDDocument d = open(src)) {
             PDDocumentInformation info = d.getDocumentInformation();
-            info.setTitle(emptyToNull(title));
-            info.setAuthor(emptyToNull(author));
-            info.setSubject(emptyToNull(subject));
-            info.setKeywords(emptyToNull(keywords));
-            info.setCreator(emptyToNull(creator));
+            info.setTitle(emptyToNull(in.title));
+            info.setAuthor(emptyToNull(in.author));
+            info.setSubject(emptyToNull(in.subject));
+            info.setKeywords(emptyToNull(in.keywords));
+            info.setCreator(emptyToNull(in.creator));
+            info.setProducer(emptyToNull(in.producer));
+            java.util.Calendar c = parseDate(in.creationDate);
+            if (c != null) info.setCreationDate(c);
+            java.util.Calendar m = parseDate(in.modDate);
+            if (m != null) info.setModificationDate(m);
             d.save(out);
+        }
+    }
+
+    /** Remove every document property, including the XMP metadata stream. */
+    public static void clearMetadata(File src, File out) throws Exception {
+        try (PDDocument d = open(src)) {
+            d.setDocumentInformation(new PDDocumentInformation());
+            d.getDocumentCatalog().getCOSObject().removeItem(COSName.METADATA);
+            d.save(out);
+        }
+    }
+
+    private static java.util.Calendar parseDate(String s) {
+        if (s == null || s.trim().isEmpty()) return null;
+        try {
+            java.util.Calendar c = java.util.Calendar.getInstance();
+            c.setTime(META_DATE.parse(s.trim()));
+            return c;
+        } catch (Exception e) {
+            return null;
         }
     }
 
@@ -713,6 +798,40 @@ public final class PdfEngine {
                 } else {
                     try (PDPageContentStream cs = new PDPageContentStream(d, page)) {
                         cs.drawImage(img, 0, 0, pageSize.getWidth(), pageSize.getHeight());
+                    }
+                }
+            }
+            d.save(out);
+        }
+    }
+
+    /** One page of a document built from scratch. */
+    @SuppressWarnings("unused")
+    public static final class PageSpec {
+        public float width, height;
+        public int bgColor = 0xFFFFFFFF;
+        /** Transparent overlay (annotations/text) drawn on top of the background, or null. */
+        public File raster;
+
+        public PageSpec(float width, float height, int bgColor, File raster) {
+            this.width = width; this.height = height; this.bgColor = bgColor; this.raster = raster;
+        }
+    }
+
+    /** Build a PDF from a list of pages (background colour + optional transparent overlay). */
+    public static void createPdf(List<PageSpec> pages, File out) throws Exception {
+        if (pages == null || pages.isEmpty()) throw new IllegalArgumentException("Add at least one page");
+        try (PDDocument d = new PDDocument()) {
+            for (PageSpec p : pages) {
+                PDPage page = new PDPage(new PDRectangle(p.width, p.height));
+                d.addPage(page);
+                try (PDPageContentStream cs = new PDPageContentStream(d, page)) {
+                    cs.setNonStrokingColor((p.bgColor >> 16) & 0xFF, (p.bgColor >> 8) & 0xFF, p.bgColor & 0xFF);
+                    cs.addRect(0, 0, p.width, p.height);
+                    cs.fill();
+                    if (p.raster != null && p.raster.exists()) {
+                        PDImageXObject img = PDImageXObject.createFromFile(p.raster.getAbsolutePath(), d);
+                        cs.drawImage(img, 0, 0, p.width, p.height);
                     }
                 }
             }

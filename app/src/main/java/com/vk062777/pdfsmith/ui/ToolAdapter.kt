@@ -19,6 +19,8 @@ class ToolAdapter(
     private val onClick: (Action) -> Unit
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
+    private val animated = HashSet<Int>()
+
     override fun getItemViewType(position: Int) = if (rows[position] is HomeRow.Header) 0 else 1
 
     override fun getItemCount() = rows.size
@@ -43,6 +45,17 @@ class ToolAdapter(
                 toolTitle.setText(row.item.title)
                 toolDesc.setText(row.item.desc)
                 root.setOnClickListener { onClick(row.item.action) }
+                // light stagger-in the first time each card appears
+                if (animated.add(position)) {
+                    root.alpha = 0f
+                    root.translationY = 24f
+                    root.animate()
+                        .alpha(1f)
+                        .translationY(0f)
+                        .setStartDelay((position % 12) * 22L)
+                        .setDuration(240)
+                        .start()
+                }
             }
         }
     }

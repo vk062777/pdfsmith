@@ -78,7 +78,6 @@ class PagesActivity : PdfActivity() {
 
             override fun clearView(rv: RecyclerView, vh: RecyclerView.ViewHolder) {
                 super.clearView(rv, vh)
-                adapter?.notifyDataSetChanged()
                 updateInfo()
             }
         }

@@ -12,6 +12,23 @@ Package: `com.vk062777.pdfsmith` · Display name: **NovaPDF** · Licence: Apache
 
 ---
 
+
+## What's new in 1.2.0
+
+- **New logo** built from the supplied artwork (corners masked so no white shows).
+- **Animations** — light activity transitions, staggered card entry, press feedback,
+  fade-in pages, and an animated **success popup** (Open / Share) after every task.
+- **Accent themes** — Indigo, Teal, Violet, Green, Crimson, alongside light/dark.
+- **Create PDF** — build a document from scratch: page size, orientation, page
+  colour, multiple pages, text, images, highlights and freehand drawing.
+- **Digital signatures** — real PKCS#7/CMS detached signatures with a generated
+  X.509 certificate, plus **verification** that detects any change made after signing.
+- **Rotate everywhere** — reader, page organiser, a dedicated Rotate tool, and
+  inside Annotate (annotations rotate with the page).
+- **Richer metadata** — creator, producer, creation/modification dates, and a
+  "clear all metadata" action.
+- Smoother scrolling and less memory pressure in the reader and page grid.
+
 ## Features
 
 | Tool | What it does |
@@ -64,15 +81,18 @@ first). Keep the keystore safe — it is the app's permanent identity.
 The document engine is verified independently of the UI. `tools/verify-engine.sh`
 compiles the **real** engine source against the **real** `pdfbox-android` library on a
 plain JVM (with tiny stubs for the handful of `android.*` classes the engine touches)
-and runs **53 behavioural assertions**: merge, split, reorder, rotate, delete,
+and runs **72 behavioural assertions**: merge, split, reorder, rotate, delete,
 text/image stamping, watermark (centred, random, multiple fonts/colours), page
 numbers, encryption, decryption (owner-only and user-password), compression
 (asserting a real size reduction), metadata, images-to-PDF (single and multi-image),
-image extraction and form filling.
+image extraction, form filling, PDF creation, extended metadata, and digital signing/verification (including a tamper-detection test).
 
 ```bash
 bash tools/verify-engine.sh
 ```
+
+It then renders the rotated output PDFs and **pixel-checks** them with PyMuPDF, so
+rotation-aware overlay placement is verified visually rather than assumed.
 
 This runs automatically on every push in GitHub Actions, before the APK is built.
 
@@ -80,7 +100,7 @@ This runs automatically on every push in GitHub Actions, before the APK is built
 
 `.github/workflows/android.yml` runs on every push to `main`:
 
-1. verifies the engine (53 checks),
+1. verifies the engine (72 checks + rendered rotation checks),
 2. builds a **signed** release APK,
 3. uploads it as a build artifact and attaches it to a GitHub Release.
 

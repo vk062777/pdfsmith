@@ -252,7 +252,7 @@ class AnnotateActivity : PdfActivity() {
             if (PdfEngine.needsPassword(f)) error(getString(R.string.msg_needs_password))
             source = f
             pageSizes.clear()
-            pageSizes.addAll(PdfEngine.pageSizes(f))
+            pageSizes.addAll(PdfEngine.pageDisplaySizes(f))
             val d = ParcelFileDescriptor.open(f, ParcelFileDescriptor.MODE_READ_ONLY)
             pfd = d
             val r = PdfRenderer(d)
@@ -406,16 +406,72 @@ class AnnotateActivity : PdfActivity() {
         val pagesWithInk = stamps.filterValues { it.isNotEmpty() }
         if (pagesWithInk.isEmpty()) { toast(getString(R.string.msg_need_selection)); return }
         runAndSave(Files.suggestName(sourceName, "_annotated")) { out ->
-            val images = ArrayList<PdfEngine.ImageStamp>()
+            val pages = ArrayList<Int>()
+            val rasters = ArrayList<File>()
             for ((page, list) in pagesWithInk) {
                 val size = pageSizes.getOrNull(page) ?: floatArrayOf(595f, 842f)
                 val bmp = com.vk062777.pdfsmith.ui.AnnotRenderer.rasterize(list, size[0], size[1], 2.5f)
                 val png = Files.newFile(this, "annot_${page + 1}.png")
                 FileOutputStream(png).use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
                 bmp.recycle()
-                images.add(PdfEngine.ImageStamp(page + 1, 0f, 0f, size[0], size[1], png))
+                pages.add(page + 1)
+                rasters.add(png)
             }
-            PdfEngine.applyStamps(src, null, images, null, out)
+            // the overlay was produced in the displayed frame, so stamp it rotation-aware
+            PdfEngine.stampDisplayRasters(src, pages, rasters, out)
+        }
+    }
+
+    /** Rotate the document 90° clockwise and rotate the annotations with it. */
+    private fun rotateDocument() {
+        val src = source ?: return toast(getString(R.string.msg_pick_file_first))
+        runTask(getString(R.string.msg_processing), onDone = rotated@{ newFile ->
+            if (newFile == null) return@rotated
+            source = newFile
+            pageSizes.clear()
+            pageSizes.addAll(PdfEngine.pageDisplaySizes(newFile))
+            stamps.values.forEach { rotateItems90(it) }
+            goTo(current)
+        }) {
+            val out = Files.newFile(this, "rotated.pdf")
+            PdfEngine.rotatePages(src, null, 90, out)
+            val d = ParcelFileDescriptor.open(out, ParcelFileDescriptor.MODE_READ_ONLY)
+            try { pfd?.close() } catch (_: Exception) { }
+            pfd = d
+            try { renderer?.close() } catch (_: Exception) { }
+            renderer = PageRenderer(PdfRenderer(d))
+            out
+        }
+    }
+
+    /** 90° clockwise transform in normalised (display) coordinates. */
+    private fun rotateItems90(list: MutableList<Annot>) {
+        for (i in list.indices) {
+            when (val a = list[i]) {
+                is Annot.Text -> {
+                    val nx = 1f - a.fy; val ny = a.fx
+                    a.fx = nx; a.fy = ny
+                }
+                is Annot.Cover -> {
+                    val nx = 1f - (a.fy + a.fh); val ny = a.fx
+                    val nw = a.fh; val nh = a.fw
+                    a.fx = nx; a.fy = ny; a.fw = nw; a.fh = nh
+                }
+                is Annot.Highlight -> {
+                    val nx = 1f - (a.fy + a.fh); val ny = a.fx
+                    val nw = a.fh; val nh = a.fw
+                    a.fx = nx; a.fy = ny; a.fw = nw; a.fh = nh
+                }
+                is Annot.Stamp -> {
+                    val nx = 1f - (a.fy + a.fh); val ny = a.fx
+                    val nw = a.fh; val nh = a.fw
+                    a.fx = nx; a.fy = ny; a.fw = nw; a.fh = nh
+                }
+                is Annot.Stroke -> a.points.forEach { p ->
+                    val nx = 1f - p.y; val ny = p.x
+                    p.x = nx; p.y = ny
+                }
+            }
         }
     }
 
@@ -424,7 +480,9 @@ class AnnotateActivity : PdfActivity() {
             .setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM)
         menu.add(0, 2, 1, R.string.action_redo).setIcon(R.drawable.ic_redo)
             .setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM)
-        menu.add(0, 3, 2, R.string.action_save_as)
+        menu.add(0, 4, 2, R.string.action_rotate).setIcon(R.drawable.ic_rotate)
+            .setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM)
+        menu.add(0, 3, 3, R.string.action_save_as)
             .setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
         return true
     }
@@ -434,6 +492,7 @@ class AnnotateActivity : PdfActivity() {
             1 -> { undo(); return true }
             2 -> { redo(); return true }
             3 -> { save(); return true }
+            4 -> { rotateDocument(); return true }
         }
         return super.onOptionsItemSelected(item)
     }

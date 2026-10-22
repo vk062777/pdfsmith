@@ -137,4 +137,51 @@
     <string name="msg_offline">NovaPDF works fully offline. Your files never leave your device.</string>
 
     <string name="cd_tool_icon">Tool icon</string>
+
+    <string name="section_create">Create</string>
+    <string name="section_output">Output &amp; tools</string>
+
+    <string name="tool_create_pdf">Create PDF</string>
+    <string name="tool_create_pdf_desc">Build a PDF from scratch — text, images, drawing and pages</string>
+    <string name="tool_rotate">Rotate pages</string>
+    <string name="tool_rotate_desc">Turn every page by 90°, 180° or 270°</string>
+    <string name="tool_sign">Digital signature</string>
+    <string name="tool_sign_desc">Cryptographically sign a PDF so it can be verified</string>
+    <string name="tool_verify">Verify signature</string>
+    <string name="tool_verify_desc">Check whether a PDF is signed and unmodified</string>
+
+    <string name="hint_signer_name">Your name (signer)</string>
+    <string name="hint_organisation">Organisation</string>
+    <string name="hint_reason">Reason</string>
+    <string name="hint_location">Location</string>
+    <string name="hint_contact">Contact (email / phone)</string>
+    <string name="hint_angle">Rotation</string>
+
+    <string name="angle_90">90° clockwise</string>
+    <string name="angle_180">180°</string>
+    <string name="angle_270">270° (90° anticlockwise)</string>
+
+    <string name="msg_signed_ok">Signed successfully. Anyone can verify this signature with the Verify tool.</string>
+    <string name="msg_not_signed">This PDF has no digital signature.</string>
+    <string name="msg_sig_valid">Signature VALID — the document is unmodified and the signer certificate matches.</string>
+    <string name="msg_sig_invalid">Signature INVALID — the document does not match the signature (it was changed after signing).</string>
+    <string name="msg_sig_tampered">The signed bytes have been altered since signing.</string>
+    <string name="msg_sig_partial">The signature does not cover the whole file (content was added after signing).</string>
+    <string name="msg_sig_selfsigned">The certificate is self-signed (issued by NovaPDF, not a public CA). The signature still proves the file is unchanged.</string>
+    <string name="title_signature">Signature</string>
+
+    <string name="create_page_size">Page size</string>
+    <string name="create_orientation">Orientation</string>
+    <string name="create_background">Page colour</string>
+    <string name="create_add_page">Add page</string>
+    <string name="create_delete_page">Delete page</string>
+    <string name="create_duplicate_page">Duplicate page</string>
+    <string name="create_page">Page</string>
+    <string name="orientation_portrait">Portrait</string>
+    <string name="orientation_landscape">Landscape</string>
+    <string name="size_a4">A4</string>
+    <string name="size_letter">Letter</string>
+    <string name="size_legal">Legal</string>
+    <string name="msg_create_hint">Pick a tool below, then tap or draw on the page.</string>
+    <string name="action_new">New</string>
 </resources>

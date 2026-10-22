@@ -11,7 +11,8 @@
     app:cardCornerRadius="16dp"
     app:cardElevation="1dp"
     app:strokeColor="@color/divider"
-    app:strokeWidth="1dp">
+    app:strokeWidth="1dp"
+    android:stateListAnimator="@anim/card_press">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -26,7 +27,7 @@
             android:layout_height="30dp"
             android:contentDescription="@string/cd_tool_icon"
             android:src="@drawable/ic_file"
-            app:tint="@color/brand_primary" />
+            app:tint="?attr/colorPrimary" />
 
         <TextView
             android:id="@+id/toolTitle"

@@ -1,24 +1,54 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Default accent: Indigo. The Theme.PDFsmith.* overlays below re-tint the
+         whole app (toolbars, headers, icons) by overriding colorPrimary. -->
     <style name="Theme.PDFsmith" parent="Theme.Material3.DayNight.NoActionBar">
-        <item name="colorPrimary">@color/brand_primary</item>
+        <item name="colorPrimary">#FF3B5BDB</item>
         <item name="colorOnPrimary">@color/white</item>
-        <item name="colorPrimaryContainer">@color/brand_primary_container</item>
-        <item name="colorOnPrimaryContainer">@color/brand_on_primary_container</item>
+        <item name="colorPrimaryContainer">#FFDDE4FF</item>
+        <item name="colorOnPrimaryContainer">#FF16224F</item>
         <item name="colorSecondary">@color/brand_secondary</item>
         <item name="colorSecondaryContainer">@color/brand_secondary_container</item>
         <item name="android:colorBackground">@color/app_background</item>
         <item name="colorSurface">@color/surface</item>
         <item name="colorOnSurface">@color/text_primary</item>
-        <item name="android:statusBarColor">@color/brand_primary_dark</item>
+        <item name="android:statusBarColor">?attr/colorPrimary</item>
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:navigationBarColor">@color/surface</item>
+        <item name="android:windowAnimationStyle">@style/Animation.PDFsmith</item>
     </style>
 
-    <style name="Theme.PDFsmith.Viewer" parent="Theme.PDFsmith">
-        <item name="android:statusBarColor">@color/brand_primary_dark</item>
-        <item name="android:windowLightStatusBar">false</item>
+    <style name="Theme.PDFsmith.Teal">
+        <item name="colorPrimary">#FF0C8599</item>
+        <item name="colorPrimaryContainer">#FFD3F1F5</item>
+        <item name="colorOnPrimaryContainer">#FF0B3038</item>
+    </style>
+
+    <style name="Theme.PDFsmith.Violet">
+        <item name="colorPrimary">#FF7048E8</item>
+        <item name="colorPrimaryContainer">#FFE5DBFF</item>
+        <item name="colorOnPrimaryContainer">#FF221454</item>
+    </style>
+
+    <style name="Theme.PDFsmith.Green">
+        <item name="colorPrimary">#FF2F9E44</item>
+        <item name="colorPrimaryContainer">#FFD3F9D8</item>
+        <item name="colorOnPrimaryContainer">#FF0B2E13</item>
+    </style>
+
+    <style name="Theme.PDFsmith.Crimson">
+        <item name="colorPrimary">#FFC2255C</item>
+        <item name="colorPrimaryContainer">#FFFCE0E9</item>
+        <item name="colorOnPrimaryContainer">#FF4A0E24</item>
+    </style>
+
+    <!-- Light, quick activity transitions -->
+    <style name="Animation.PDFsmith" parent="@android:style/Animation.Activity">
+        <item name="android:activityOpenEnterAnimation">@anim/slide_in_right</item>
+        <item name="android:activityOpenExitAnimation">@anim/fade_out_slight</item>
+        <item name="android:activityCloseEnterAnimation">@anim/fade_in_slight</item>
+        <item name="android:activityCloseExitAnimation">@anim/slide_out_right</item>
     </style>
 
     <style name="TextAppearance.PDFsmith.SectionHeader" parent="TextAppearance.Material3.TitleMedium">

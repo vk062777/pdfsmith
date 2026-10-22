@@ -3,25 +3,29 @@ package com.vk062777.pdfsmith
 import android.net.Uri
 import android.os.Bundle
 import android.text.InputType
+import android.view.Menu
+import android.view.MenuItem
 import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.Spinner
 import android.widget.TextView
+import androidx.appcompat.app.AlertDialog
 import androidx.documentfile.provider.DocumentFile
 import com.google.android.material.switchmaterial.SwitchMaterial
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 import com.vk062777.pdfsmith.databinding.ActivityToolsBinding
 import com.vk062777.pdfsmith.engine.PdfEngine
+import com.vk062777.pdfsmith.engine.PdfSigner
 import com.vk062777.pdfsmith.model.Action
 import com.vk062777.pdfsmith.util.Files
 import java.io.File
 
 /**
- * One-shot document tools: compress, watermark, protect, unlock, metadata,
- * extract images, page numbers and split.
+ * One-shot document tools: rotate, compress, watermark, protect, unlock, sign,
+ * verify, metadata, extract images, page numbers and split.
  */
 class ToolsActivity : PdfActivity() {
 
@@ -35,6 +39,8 @@ class ToolsActivity : PdfActivity() {
             0xFFF08C00.toInt(), 0xFF7048E8.toInt(), 0xFF868E96.toInt()
         )
         private val LEVEL_NAMES = listOf("Light — best quality", "Balanced", "Strong — smallest file")
+        private val ANGLE_NAMES = listOf("90° clockwise", "180°", "270° (90° anticlockwise)")
+        private val ANGLE_VALUES = intArrayOf(90, 180, 270)
     }
 
     private lateinit var binding: ActivityToolsBinding
@@ -55,10 +61,20 @@ class ToolsActivity : PdfActivity() {
     private var fAuthor: EditText? = null
     private var fSubject: EditText? = null
     private var fKeywords: EditText? = null
+    private var fCreator: EditText? = null
+    private var fProducer: EditText? = null
+    private var fCreated: EditText? = null
+    private var fModified: EditText? = null
+    private var fSignName: EditText? = null
+    private var fSignOrg: EditText? = null
+    private var fSignReason: EditText? = null
+    private var fSignLocation: EditText? = null
+    private var fSignContact: EditText? = null
     private var fFontSpinner: Spinner? = null
     private var fColourSpinner: Spinner? = null
     private var fRandom: SwitchMaterial? = null
     private var fLevelSpinner: Spinner? = null
+    private var fAngleSpinner: Spinner? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -79,10 +95,13 @@ class ToolsActivity : PdfActivity() {
 
     private fun applyToolChrome() {
         val (title, desc) = when (tool) {
+            Action.ROTATE -> R.string.tool_rotate to R.string.tool_rotate_desc
             Action.COMPRESS -> R.string.tool_compress to R.string.tool_compress_desc
             Action.WATERMARK -> R.string.tool_watermark to R.string.tool_watermark_desc
             Action.PROTECT -> R.string.tool_protect to R.string.tool_protect_desc
             Action.UNLOCK -> R.string.tool_unlock to R.string.tool_unlock_desc
+            Action.SIGN -> R.string.tool_sign to R.string.tool_sign_desc
+            Action.VERIFY -> R.string.tool_verify to R.string.tool_verify_desc
             Action.METADATA -> R.string.tool_metadata to R.string.tool_metadata_desc
             Action.EXTRACT -> R.string.tool_extract to R.string.tool_extract_desc
             Action.PAGENUM -> R.string.tool_pagenum to R.string.tool_pagenum_desc
@@ -101,8 +120,7 @@ class ToolsActivity : PdfActivity() {
             binding.btnRun.isEnabled = true
         }) {
             val f = Files.copyToCache(this, uri)
-            // Unlock must accept protected files; other tools need an openable PDF.
-            if (tool != Action.UNLOCK && PdfEngine.needsPassword(f)) {
+            if (tool != Action.UNLOCK && tool != Action.VERIFY && PdfEngine.needsPassword(f)) {
                 error(getString(R.string.msg_needs_password))
             }
             source = f
@@ -176,9 +194,14 @@ class ToolsActivity : PdfActivity() {
         fText = null; fFont = null; fOpacity = null; fPw = null; fPw2 = null
         fRanges = null; fFormat = null
         fTitle = null; fAuthor = null; fSubject = null; fKeywords = null
-        fFontSpinner = null; fColourSpinner = null; fRandom = null; fLevelSpinner = null
+        fCreator = null; fProducer = null; fCreated = null; fModified = null
+        fSignName = null; fSignOrg = null; fSignReason = null; fSignLocation = null; fSignContact = null
+        fFontSpinner = null; fColourSpinner = null; fRandom = null; fLevelSpinner = null; fAngleSpinner = null
 
         when (tool) {
+            Action.ROTATE -> {
+                fAngleSpinner = addSpinner(getString(R.string.hint_angle), ANGLE_NAMES, 0)
+            }
             Action.WATERMARK -> {
                 fText = addField(getString(R.string.hint_watermark_text))
                 fFontSpinner = addSpinner(getString(R.string.label_font), FONT_NAMES, 1)
@@ -200,11 +223,26 @@ class ToolsActivity : PdfActivity() {
             Action.UNLOCK -> {
                 fPw = addField(getString(R.string.hint_password), InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD)
             }
+            Action.SIGN -> {
+                fSignName = addField(getString(R.string.hint_signer_name))
+                fSignOrg = addField(getString(R.string.hint_organisation))
+                fSignReason = addField(getString(R.string.hint_reason))
+                fSignLocation = addField(getString(R.string.hint_location))
+                fSignContact = addField(getString(R.string.hint_contact))
+            }
+            Action.VERIFY -> {
+                binding.outputHint.visibility = View.VISIBLE
+                binding.outputHint.text = getString(R.string.tool_verify_desc)
+            }
             Action.METADATA -> {
                 fTitle = addField(getString(R.string.hint_title), InputType.TYPE_CLASS_TEXT, meta["title"] ?: "")
                 fAuthor = addField(getString(R.string.hint_author), InputType.TYPE_CLASS_TEXT, meta["author"] ?: "")
                 fSubject = addField(getString(R.string.hint_subject), InputType.TYPE_CLASS_TEXT, meta["subject"] ?: "")
                 fKeywords = addField(getString(R.string.hint_keywords), InputType.TYPE_CLASS_TEXT, meta["keywords"] ?: "")
+                fCreator = addField("Creator (application)", InputType.TYPE_CLASS_TEXT, meta["creator"] ?: "")
+                fProducer = addField("Producer", InputType.TYPE_CLASS_TEXT, meta["producer"] ?: "")
+                fCreated = addField("Creation date (yyyy-MM-dd HH:mm)", InputType.TYPE_CLASS_TEXT, meta["creationDate"] ?: "")
+                fModified = addField("Modified date (yyyy-MM-dd HH:mm)", InputType.TYPE_CLASS_TEXT, meta["modDate"] ?: "")
             }
             Action.PAGENUM -> {
                 fFormat = addField(getString(R.string.hint_page_format), InputType.TYPE_CLASS_TEXT, "Page {n} of {total}")
@@ -227,6 +265,10 @@ class ToolsActivity : PdfActivity() {
 
     private fun onRun() {
         when (tool) {
+            Action.ROTATE -> {
+                val angle = ANGLE_VALUES[(fAngleSpinner?.selectedItemPosition ?: 0).coerceIn(0, 2)]
+                single { PdfEngine.rotatePages(it.first, null, angle, it.second) }
+            }
             Action.COMPRESS -> {
                 val level = fLevelSpinner?.selectedItemPosition ?: 1
                 single { PdfEngine.compress(it.first, it.second, level) }
@@ -256,10 +298,35 @@ class ToolsActivity : PdfActivity() {
                 val p = fPw?.text?.toString().orEmpty()
                 single { PdfEngine.decrypt(it.first, p, it.second) }
             }
+            Action.SIGN -> {
+                val name = fSignName?.text?.toString()?.trim().orEmpty()
+                if (name.isEmpty()) return toast(getString(R.string.msg_enter_text))
+                val params = PdfSigner.SignParams()
+                params.name = name
+                params.organisation = fSignOrg?.text?.toString()?.trim().orEmpty()
+                params.reason = fSignReason?.text?.toString()?.trim().orEmpty()
+                params.location = fSignLocation?.text?.toString()?.trim().orEmpty()
+                params.contact = fSignContact?.text?.toString()?.trim().orEmpty()
+                single { PdfSigner.sign(it.first, it.second, params) }
+            }
+            Action.VERIFY -> {
+                val src = source ?: return toast(getString(R.string.msg_pick_file_first))
+                runTask(getString(R.string.msg_processing), onDone = checked@{ list ->
+                    if (list == null) return@checked
+                    showVerification(list)
+                }) { PdfSigner.verify(src) }
+            }
             Action.METADATA -> {
-                val t = fTitle?.text?.toString(); val a = fAuthor?.text?.toString()
-                val s = fSubject?.text?.toString(); val k = fKeywords?.text?.toString()
-                single { PdfEngine.setMetadata(it.first, t, a, s, k, null, it.second) }
+                val info = PdfEngine.MetadataInfo()
+                info.title = fTitle?.text?.toString()
+                info.author = fAuthor?.text?.toString()
+                info.subject = fSubject?.text?.toString()
+                info.keywords = fKeywords?.text?.toString()
+                info.creator = fCreator?.text?.toString()
+                info.producer = fProducer?.text?.toString()
+                info.creationDate = fCreated?.text?.toString()
+                info.modDate = fModified?.text?.toString()
+                single { PdfEngine.setMetadata(it.first, info, it.second) }
             }
             Action.PAGENUM -> {
                 val fmt = fFormat?.text?.toString()?.ifBlank { "Page {n} of {total}" } ?: "Page {n} of {total}"
@@ -283,6 +350,36 @@ class ToolsActivity : PdfActivity() {
         }
     }
 
+    private fun showVerification(list: List<PdfSigner.SignatureInfo>) {
+        val msg = if (list.isEmpty()) {
+            getString(R.string.msg_not_signed)
+        } else {
+            buildString {
+                list.forEachIndexed { i, s ->
+                    if (i > 0) append("\n\n")
+                    append(getString(R.string.title_signature)).append(" ").append(i + 1).append("\n")
+                    append("Signer: ").append(s.signerName.ifEmpty { "—" }).append("\n")
+                    append("Date: ").append(s.date.ifEmpty { "—" }).append("\n")
+                    if (s.reason.isNotEmpty()) append("Reason: ").append(s.reason).append("\n")
+                    if (s.location.isNotEmpty()) append("Location: ").append(s.location).append("\n")
+                    append("Certificate: ").append(s.subject.ifEmpty { "—" }).append("\n")
+                    append("Status: ").append(
+                        if (s.valid && s.coversWholeDocument) getString(R.string.msg_sig_valid)
+                        else if (!s.valid) getString(R.string.msg_sig_invalid)
+                        else getString(R.string.msg_sig_partial)
+                    )
+                    append("\n").append(getString(R.string.msg_sig_selfsigned))
+                    if (s.error.isNotEmpty()) append("\n").append(s.error)
+                }
+            }
+        }
+        AlertDialog.Builder(this)
+            .setTitle(R.string.tool_verify)
+            .setMessage(msg)
+            .setPositiveButton(R.string.action_close, null)
+            .show()
+    }
+
     private fun single(produce: (Pair<File, File>) -> Unit) {
         val src = source ?: return toast(getString(R.string.msg_pick_file_first))
         runAndSave(Files.suggestName(sourceName, suffixFor(tool))) { out ->
@@ -293,7 +390,7 @@ class ToolsActivity : PdfActivity() {
     private fun multi(produce: (File) -> List<File>) {
         val tree = treeUri ?: return
         runTask(getString(R.string.msg_processing), onDone = done@{ n ->
-            if (n != null) toast(getString(R.string.msg_saved_to, "$n files"))
+            if (n != null) showSuccess(getString(R.string.msg_saved_to, "$n files"), null)
         }) {
             val dir = Files.newFile(this, "out").apply { if (exists()) delete(); mkdirs() }
             val files = produce(dir)
@@ -311,10 +408,12 @@ class ToolsActivity : PdfActivity() {
     }
 
     private fun suffixFor(tool: Action) = when (tool) {
+        Action.ROTATE -> "_rotated"
         Action.COMPRESS -> "_compressed"
         Action.WATERMARK -> "_watermarked"
         Action.PROTECT -> "_protected"
         Action.UNLOCK -> "_unlocked"
+        Action.SIGN -> "_signed"
         Action.METADATA -> "_metadata"
         Action.PAGENUM -> "_numbered"
         else -> "_out"
@@ -344,6 +443,21 @@ class ToolsActivity : PdfActivity() {
             }
         }
         return out
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        if (tool == Action.METADATA) {
+            menu.add(0, 1, 0, "Clear all metadata")
+        }
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        if (item.itemId == 1 && tool == Action.METADATA) {
+            single { PdfEngine.clearMetadata(it.first, it.second) }
+            return true
+        }
+        return super.onOptionsItemSelected(item)
     }
 
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()

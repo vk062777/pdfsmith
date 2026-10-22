@@ -25,7 +25,8 @@
             android:name=".ViewerActivity"
             android:exported="true"
             android:label="@string/app_name"
-            android:configChanges="orientation|screenSize|keyboardHidden">
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -39,6 +40,11 @@
         <activity android:name=".AnnotateActivity" android:exported="false" android:label="@string/tool_annotate" />
         <activity android:name=".FormsActivity" android:exported="false" android:label="@string/tool_forms" />
         <activity android:name=".ToolsActivity" android:exported="false" />
+        <activity
+            android:name=".CreatePdfActivity"
+            android:exported="false"
+            android:label="@string/tool_create_pdf"
+            android:configChanges="orientation|screenSize|keyboardHidden" />
 
         <provider
             android:name="androidx.core.content.FileProvider"

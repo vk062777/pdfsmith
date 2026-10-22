@@ -1,4 +1,5 @@
 import com.vk062777.pdfsmith.engine.PdfEngine;
+import com.vk062777.pdfsmith.engine.PdfSigner;
 import com.tom_roush.pdfbox.pdmodel.*;
 import com.tom_roush.pdfbox.pdmodel.common.PDRectangle;
 import com.tom_roush.pdfbox.pdmodel.font.PDType1Font;
@@ -173,7 +174,10 @@ public class TestEngine {
 
     System.out.println("== metadata ==");
     File meta = new File(W, "meta.pdf");
-    PdfEngine.setMetadata(a, "My Title", "Author X", "Subject Y", "kw1 kw2", "PDFsmith", meta);
+    PdfEngine.MetadataInfo basic = new PdfEngine.MetadataInfo();
+    basic.title = "My Title"; basic.author = "Author X"; basic.subject = "Subject Y";
+    basic.keywords = "kw1 kw2"; basic.creator = "PDFsmith";
+    PdfEngine.setMetadata(a, basic, meta);
     Map<String, String> m = PdfEngine.getMetadata(meta);
     check("title set", "My Title".equals(m.get("title")));
     check("author set", "Author X".equals(m.get("author")));
@@ -262,6 +266,69 @@ public class TestEngine {
     System.out.println("     scan " + bigScan.length() + " -> " + smallScan.length() + " (" + Math.round(ratio * 100) + "%)");
     check("strong compress >50% smaller", ratio < 0.5);
 
+
+    System.out.println("== metadata extras ==");
+    PdfEngine.MetadataInfo mi = new PdfEngine.MetadataInfo();
+    mi.title = "T"; mi.author = "A"; mi.subject = "S"; mi.keywords = "k1 k2";
+    mi.creator = "NovaPDF"; mi.producer = "NovaPDF 1.2";
+    mi.creationDate = "2026-01-02 03:04"; mi.modDate = "2026-05-06 07:08";
+    File metaX = new File(W, "meta2.pdf");
+    PdfEngine.setMetadata(a, mi, metaX);
+    Map<String, String> mm = PdfEngine.getMetadata(metaX);
+    check("meta creator", "NovaPDF".equals(mm.get("creator")));
+    check("meta producer", "NovaPDF 1.2".equals(mm.get("producer")));
+    check("meta creationDate", "2026-01-02 03:04".equals(mm.get("creationDate")));
+    check("meta modDate", "2026-05-06 07:08".equals(mm.get("modDate")));
+    File metaY = new File(W, "meta3.pdf");
+    PdfEngine.clearMetadata(metaX, metaY);
+    Map<String, String> mc = PdfEngine.getMetadata(metaY);
+    check("cleared title", mc.get("title").isEmpty());
+    check("cleared author", mc.get("author").isEmpty());
+
+    System.out.println("== create pdf ==");
+    File r1 = new File(W, "rast1.png");
+    if (!r1.exists()) writeImg(r1, 1190, 1684, "png");
+    File created = new File(W, "created.pdf");
+    PdfEngine.createPdf(Arrays.asList(
+        new PdfEngine.PageSpec(595, 842, 0xFFFFFFFF, r1),
+        new PdfEngine.PageSpec(595, 842, 0xFFEFF3FF, null)), created);
+    check("createPdf pages=2", PdfEngine.pageCount(created) == 2);
+    check("createPdf A4 width", Math.abs(PdfEngine.pageSizes(created).get(0)[0] - 595f) < 1f);
+
+    System.out.println("== digital signature ==");
+    PdfSigner.SignParams sp = new PdfSigner.SignParams();
+    sp.name = "Ravi Kumar"; sp.organisation = "Acme"; sp.reason = "Approved";
+    sp.location = "Delhi"; sp.contact = "ravi@example.com";
+    File signed = new File(W, "signed.pdf");
+    PdfSigner.sign(a, signed, sp);
+    check("signed file created", signed.exists() && signed.length() > 0);
+    List<PdfSigner.SignatureInfo> vs = PdfSigner.verify(signed);
+    check("one signature found", vs.size() == 1);
+    if (!vs.isEmpty()) {
+      PdfSigner.SignatureInfo si = vs.get(0);
+      check("signature cryptographically valid", si.valid);
+      check("signature covers whole document", si.coversWholeDocument);
+      check("signer name preserved", "Ravi Kumar".equals(si.signerName));
+      check("cert subject CN", si.subject.contains("CN=Ravi Kumar"));
+      check("cert subject O", si.subject.contains("O=Acme"));
+      check("reason preserved", "Approved".equals(si.reason));
+      check("location preserved", "Delhi".equals(si.location));
+    }
+    check("unsigned doc reports no signatures", PdfSigner.verify(a).isEmpty());
+
+    // tamper: change the document after signing -> must fail verification
+    File tampered = new File(W, "tampered.pdf");
+    try (PDDocument td = PDDocument.load(signed)) {
+      td.getDocumentInformation().setTitle("TAMPERED");
+      td.save(tampered);
+    }
+    boolean tamperCaught;
+    try {
+      List<PdfSigner.SignatureInfo> vt = PdfSigner.verify(tampered);
+      tamperCaught = vt.isEmpty() || !vt.get(0).valid || !vt.get(0).coversWholeDocument;
+    } catch (Exception e) { tamperCaught = true; }
+    check("tampered document fails verification", tamperCaught);
+
     System.out.println();
     System.out.println("TOTAL: " + pass + " passed, " + fail + " failed");
     if (fail > 0) System.exit(1);
@@ -299,6 +366,13 @@ public class TestEngine {
       }
     }
     return n;
+  }
+
+  static byte[] readBytes(File f) throws Exception {
+    return java.nio.file.Files.readAllBytes(f.toPath());
+  }
+  static void writeBytes(File f, byte[] b) throws Exception {
+    java.nio.file.Files.write(f.toPath(), b);
   }
 
   static File makeForm() throws Exception {

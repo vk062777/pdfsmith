@@ -19,12 +19,20 @@ class PdfSmithApp : Application() {
     companion object {
         const val PREFS = "novapdf"
         const val KEY_THEME = "theme"
+        const val KEY_ACCENT = "accent"
 
         fun themePref(context: android.content.Context): Int =
             context.getSharedPreferences(PREFS, MODE_PRIVATE).getInt(KEY_THEME, 0)
 
         fun setThemePref(context: android.content.Context, mode: Int) {
             context.getSharedPreferences(PREFS, MODE_PRIVATE).edit().putInt(KEY_THEME, mode).apply()
+        }
+
+        fun accentPref(context: android.content.Context): Int =
+            context.getSharedPreferences(PREFS, MODE_PRIVATE).getInt(KEY_ACCENT, 0)
+
+        fun setAccentPref(context: android.content.Context, index: Int) {
+            context.getSharedPreferences(PREFS, MODE_PRIVATE).edit().putInt(KEY_ACCENT, index).apply()
         }
     }
 }

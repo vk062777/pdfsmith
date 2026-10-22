@@ -116,7 +116,7 @@ class ViewerActivity : PdfActivity() {
     }
 
     companion object {
-        private const val BASE_FACTOR = 2.0f
+        private const val BASE_FACTOR = 1.75f
         private const val MAX_FACTOR = 4.0f
         private const val MAX_WIDTH = 3200
     }

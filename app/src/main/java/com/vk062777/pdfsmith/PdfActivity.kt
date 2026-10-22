@@ -3,12 +3,17 @@ package com.vk062777.pdfsmith
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.view.View
+import android.view.animation.OvershootInterpolator
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.vk062777.pdfsmith.util.Busy
 import com.vk062777.pdfsmith.util.Files
+import com.vk062777.pdfsmith.util.ThemeUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -55,7 +60,7 @@ abstract class PdfActivity : AppCompatActivity() {
             val out = Files.newFile(this, pendingName)
             runTask(getString(R.string.msg_processing), onDone = saved@{ result ->
                 if (result == null) return@saved
-                toast(getString(R.string.msg_saved_to, pendingName))
+                showSuccess(getString(R.string.msg_saved_to, pendingName), result)
                 onSaved(result)
             }) {
                 producer(out)
@@ -65,8 +70,39 @@ abstract class PdfActivity : AppCompatActivity() {
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        ThemeUtil.apply(this)
         super.onCreate(savedInstanceState)
         busy = Busy(this)
+    }
+
+    /** A friendly "all done" popup with Open / Share / Close. */
+    protected fun showSuccess(message: String, file: File?, mime: String = "application/pdf") {
+        val view = layoutInflater.inflate(R.layout.dialog_success, null)
+        view.findViewById<TextView>(R.id.successMsg).text = message
+
+        val icon = view.findViewById<View>(R.id.successIcon)
+        icon.scaleX = 0.5f
+        icon.scaleY = 0.5f
+        icon.alpha = 0f
+        icon.animate()
+            .scaleX(1f).scaleY(1f).alpha(1f)
+            .setDuration(260)
+            .setInterpolator(OvershootInterpolator())
+            .start()
+
+        val dialog = AlertDialog.Builder(this).setView(view).setCancelable(true).create()
+
+        val open = view.findViewById<View>(R.id.successOpen)
+        val share = view.findViewById<View>(R.id.successShare)
+        open.isEnabled = file != null
+        share.isEnabled = file != null
+        open.setOnClickListener {
+            file?.let { Files.openWith(this, it, mime) }
+            dialog.dismiss()
+        }
+        share.setOnClickListener { file?.let { Files.share(this, it, mime) } }
+        view.findViewById<View>(R.id.successClose).setOnClickListener { dialog.dismiss() }
+        dialog.show()
     }
 
     // ---- overridable hooks -------------------------------------------------

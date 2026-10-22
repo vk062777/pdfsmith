@@ -57,8 +57,13 @@ class ViewerAdapter(
         renderInto(position, baseWidthProvider()) { bmp ->
             if (bmp == null) return@renderInto
             if (holder.bindingAdapterPosition != position) return@renderInto
-            if (holder.boundPosition == position) iv.setImageBitmapPreservingTransform(bmp)
-            else iv.setImageBitmap(bmp)
+            if (holder.boundPosition == position) {
+                iv.setImageBitmapPreservingTransform(bmp)
+            } else {
+                iv.setImageBitmap(bmp)
+                iv.alpha = 0.25f
+                iv.animate().alpha(1f).setDuration(160).start()
+            }
         }
     }
 

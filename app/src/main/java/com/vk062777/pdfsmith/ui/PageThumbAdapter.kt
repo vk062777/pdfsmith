@@ -57,6 +57,8 @@ class PageThumbAdapter(
                     if (bmp != null) cache.put(item.original, bmp)
                     if (bmp != null && holder.bindingAdapterPosition == position) {
                         thumb.setImageBitmap(bmp)
+                        thumb.alpha = 0.2f
+                        thumb.animate().alpha(1f).setDuration(150).start()
                     }
                 }
             }
