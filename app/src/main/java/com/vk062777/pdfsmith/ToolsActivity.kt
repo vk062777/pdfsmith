@@ -120,7 +120,9 @@ class ToolsActivity : PdfActivity() {
                 buildParams(emptyMap())
                 binding.btnRun.isEnabled = true
             }) {
-                source = Files.copyToCache(this, uri)
+                val f = Files.copyToCache(this, uri)
+                if (!Files.looksLikePdf(f)) error(getString(R.string.msg_not_a_pdf))
+                source = f
                 Unit
             }
             return
@@ -342,8 +344,11 @@ class ToolsActivity : PdfActivity() {
             Action.EXTRACT -> {
                 val src = source ?: return toast(getString(R.string.msg_pick_file_first))
                 if (treeUri == null) { pendingRun = true; pickTree(); return }
+                // clamp to the real page count: an input like "1-999999999" must not
+                // build an enormous list
+                val total = PdfEngine.pageCount(src)
                 val pageList = parseRanges(fExtractPages?.text?.toString().orEmpty())
-                    .flatMap { r -> (r[0]..r[1]).toList() }
+                    .flatMap { r -> (maxOf(1, r[0])..minOf(total, r[1])).toList() }
                     .distinct().sorted()
                 multi { dir -> PdfEngine.extractImages(src, dir, pageList.ifEmpty { null }) }
             }

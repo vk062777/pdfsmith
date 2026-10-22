@@ -129,6 +129,14 @@ public final class PdfSigner {
                 info.date = c == null ? "" : new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US).format(c.getTime());
 
                 try {
+                    // Validate the byte range first: a malformed range would otherwise be
+                    // handed to the parser, which could try to allocate a huge buffer.
+                    int[] br = sig.getByteRange();
+                    if (br == null || br.length != 4 || br[0] < 0 || br[1] < 0 || br[2] < 0 || br[3] < 0
+                            || (long) br[1] > src.length()
+                            || (long) br[2] + (long) br[3] > src.length()) {
+                        throw new IllegalArgumentException("Signature byte range is malformed");
+                    }
                     byte[] signedContent;
                     byte[] contents;
                     try (InputStream is = new FileInputStream(src)) {
@@ -164,11 +172,8 @@ public final class PdfSigner {
                     // ByteRange is [start1, length1, start2, length2]: the signed ranges
                     // must start at 0 and reach the end of the file. The only gap is the
                     // /Contents placeholder that holds the signature itself.
-                    int[] br = sig.getByteRange();
-                    if (br != null && br.length == 4) {
-                        long end = (long) br[2] + (long) br[3];
-                        info.coversWholeDocument = br[0] == 0 && end == src.length();
-                    }
+                    info.coversWholeDocument =
+                            br[0] == 0 && ((long) br[2] + (long) br[3]) == src.length();
                 } catch (Exception e) {
                     info.valid = false;
                     info.error = e.getClass().getSimpleName() + (e.getMessage() == null ? "" : ": " + e.getMessage());

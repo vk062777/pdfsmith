@@ -197,4 +197,5 @@
     <string name="crop_apply_all">Apply to every page</string>
     <string name="crop_hint">Drag the corners to choose the area to keep.</string>
         <string name="msg_crop_too_small">The crop area is too small</string>
+    <string name="msg_not_a_pdf">This file is not a PDF</string>
 </resources>

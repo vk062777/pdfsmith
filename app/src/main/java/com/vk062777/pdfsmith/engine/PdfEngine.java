@@ -125,6 +125,12 @@ public final class PdfEngine {
         return PDDocument.load(f, password);
     }
 
+    /** Never decode an image larger than this many pixels (guards against hostile files). */
+    private static final long MAX_IMAGE_PIXELS = 40_000_000L;
+    /** Bound recursion through nested form XObjects / form fields. */
+    private static final int MAX_XOBJECT_DEPTH = 32;
+    private static final int MAX_FIELD_DEPTH = 64;
+
     /** True if the file is encrypted at all (even if it opens without a password). */
     public static boolean isEncrypted(File f) {
         try (PDDocument d = PDDocument.load(f)) {
@@ -305,8 +311,12 @@ public final class PdfEngine {
         try (PDDocument in = open(src); PDDocument outDoc = new PDDocument()) {
             int total = in.getNumberOfPages();
             for (int p : pages1based) {
-                if (p < 1 || p > total) throw new IllegalArgumentException("Page " + p + " out of range (1.." + total + ")");
+                // Ignore anything out of range instead of failing the whole operation.
+                if (p < 1 || p > total) continue;
                 outDoc.importPage(in.getPage(p - 1));
+            }
+            if (outDoc.getNumberOfPages() == 0) {
+                throw new IllegalArgumentException("No valid pages were selected");
             }
             outDoc.save(out);
         }
@@ -641,7 +651,7 @@ public final class PdfEngine {
                 // embedded page thumbnails are pure dead weight
                 page.getCOSObject().removeItem(COSName.THUMB);
                 PDResources res = page.getResources();
-                if (res != null) compressResources(d, res, seenImages, seenResources, maxDimension, jpegQuality);
+                if (res != null) compressResources(d, res, seenImages, seenResources, maxDimension, jpegQuality, 0);
             }
             // strip identifying metadata (small but free)
             PDDocumentInformation info = d.getDocumentInformation();
@@ -655,8 +665,9 @@ public final class PdfEngine {
     private static void compressResources(PDDocument d, PDResources res,
                                           IdentityHashMap<COSBase, Boolean> seenImages,
                                           IdentityHashMap<COSBase, Boolean> seenResources,
-                                          int maxDimension, float jpegQuality) {
+                                          int maxDimension, float jpegQuality, int depth) {
         if (res == null) return;
+        if (depth > MAX_XOBJECT_DEPTH) return;
         if (seenResources.put(res.getCOSObject(), Boolean.TRUE) != null) return;
         List<COSName> names = new ArrayList<>();
         for (COSName n : res.getXObjectNames()) names.add(n);
@@ -664,13 +675,15 @@ public final class PdfEngine {
             PDXObject xo;
             try { xo = res.getXObject(name); } catch (Exception e) { continue; }
             if (xo instanceof PDFormXObject) {
-                try { compressResources(d, ((PDFormXObject) xo).getResources(), seenImages, seenResources, maxDimension, jpegQuality); }
+                try { compressResources(d, ((PDFormXObject) xo).getResources(), seenImages, seenResources, maxDimension, jpegQuality, depth + 1); }
                 catch (Exception ignore) { }
             } else if (xo instanceof PDImageXObject) {
                 PDImageXObject img = (PDImageXObject) xo;
                 if (seenImages.put(img.getCOSObject(), Boolean.TRUE) != null) continue;
                 try {
-                    Bitmap original = img.getImage();
+                    if (!safeToDecode(img)) continue;
+                    Bitmap original;
+                    try { original = img.getImage(); } catch (OutOfMemoryError | Exception e) { continue; }
                     if (original == null) continue;
                     boolean hasAlpha = original.hasAlpha();
                     int w = original.getWidth(), h = original.getHeight();
@@ -778,8 +791,13 @@ public final class PdfEngine {
     }
 
     private static void collect(PDField f, List<FormField> out) {
+        collect(f, out, 0);
+    }
+
+    private static void collect(PDField f, List<FormField> out, int depth) {
+        if (depth > MAX_FIELD_DEPTH) return;
         if (f instanceof PDNonTerminalField) {
-            for (PDField k : ((PDNonTerminalField) f).getChildren()) collect(k, out);
+            for (PDField k : ((PDNonTerminalField) f).getChildren()) collect(k, out, depth + 1);
             return;
         }
         FormField ff = new FormField();
@@ -922,6 +940,16 @@ public final class PdfEngine {
         }
     }
 
+    /** Refuse to decode an image the file claims is absurdly large. */
+    private static boolean safeToDecode(PDImageXObject img) {
+        try {
+            long w = img.getWidth(), h = img.getHeight();
+            return w > 0 && h > 0 && w * h <= MAX_IMAGE_PIXELS;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     private static Bitmap decodeBounded(File f, int maxDimension) {
         BitmapFactory.Options bounds = new BitmapFactory.Options();
         bounds.inJustDecodeBounds = true;
@@ -961,7 +989,9 @@ public final class PdfEngine {
                     if (!(xo instanceof PDImageXObject)) continue;
                     PDImageXObject img = (PDImageXObject) xo;
                     if (seen.put(img.getCOSObject(), Boolean.TRUE) != null) continue;
-                    Bitmap bmp = img.getImage();
+                    if (!safeToDecode(img)) continue;
+                    Bitmap bmp;
+                    try { bmp = img.getImage(); } catch (OutOfMemoryError | Exception e) { continue; }
                     if (bmp == null) continue;
                     boolean alpha = bmp.hasAlpha();
                     File dest = new File(outDir, "image_" + (++n) + (alpha ? ".png" : ".jpg"));

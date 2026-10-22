@@ -51,7 +51,12 @@ class FormsActivity : PdfActivity() {
                 }
                 binding.info.text = getString(R.string.label_pages, PdfEngine.pageCount(f)) +
                         "   •   " + fields.size + " fields"
-                fields.forEach { addRow(it) }
+                val shown = fields.take(MAX_FORM_FIELDS)
+                shown.forEach { addRow(it) }
+                if (fields.size > shown.size) {
+                    binding.info.text = binding.info.text.toString() +
+                            "  (showing first ${shown.size} fields)"
+                }
                 binding.btnSave.isEnabled = true
             }) {
                 source = f
@@ -59,6 +64,8 @@ class FormsActivity : PdfActivity() {
             }
         }
     }
+
+    private val MAX_FORM_FIELDS = 300
 
     private fun addRow(field: PdfEngine.FormField) {
         val label = TextView(this).apply {

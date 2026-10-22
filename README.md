@@ -74,6 +74,51 @@ Every build still runs 80 engine checks, plus rendered pixel checks for rotation
 and cropping, and a new check that confirms the encryption really is AES-256 and
 that a wrong password is rejected.
 
+
+## What's new in 1.5.0 — crash & hostile-input audit
+
+A second, deeper pass aimed specifically at *how could this app crash* and *how
+could it be attacked*. Everything found was fixed:
+
+- **A crafted input could freeze or kill the app.** Typing a page range like
+  `1-999999999` in Extract images built a list of a billion entries. Ranges are
+  now clamped to the real page count.
+- **A hostile PDF could exhaust memory.** Images whose declared size is absurd are
+  no longer decoded, and a malformed signature byte range is rejected before it
+  reaches the parser (previously it was handed over unchecked).
+- **Deeply nested PDF structures** (nested form XObjects, nested form fields) could
+  overflow the stack. Recursion is now depth-limited.
+- **A PDF with thousands of form fields** would build thousands of views. Capped,
+  with a clear note.
+- **Zero-size pages** no longer cause a divide-by-zero in the renderer.
+- **`keepPages` with an unknown page** threw an unhandled exception; it now ignores
+  out-of-range pages and refuses clearly if nothing valid is left.
+- **Security:** the shared-file provider now exposes *only* the app's own working
+  folder instead of the entire cache/files directories, and anything opened — 
+  including via the "open with" entry point that other apps can call — must
+  actually be a PDF.
+
+### Crash audit — what was checked
+
+Every screen, every engine entry point and every input path was reviewed for null
+dereferences, index errors, divide-by-zero, unclosed resources, dialogs shown on a
+dead screen, unbounded allocations and unbounded recursion. Findings are listed
+above; the rest was already safe.
+
+### Attack surface — the honest summary
+
+- The app requests **no permissions at all** — no internet, no storage, no camera.
+  It cannot send data anywhere.
+- Only two components are reachable by other apps: the launcher and the "open with"
+  PDF viewer. Everything else is `exported="false"`.
+- Shared files go out through a non-exported FileProvider as `content://` URIs, and
+  only from the app's own working folder.
+- The residual risk is the PDF parser itself — the same risk every PDF app carries.
+  The new guards make malformed and hostile files fail safely rather than crash.
+
+A new hostile-input test suite runs in CI alongside the 80 engine checks, the
+rendered rotation/crop checks and the AES-256 check.
+
 ## Features
 
 | Tool | What it does |

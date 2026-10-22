@@ -16,7 +16,7 @@ class PageRenderer(private val renderer: PdfRenderer) {
         try {
             if (page.width <= 0 || page.height <= 0) return Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
             val ratio = page.height.toFloat() / page.width.toFloat()
-            val w = targetWidth.coerceAtLeast(1)
+            val w = targetWidth.coerceIn(1, 6000)
             val h = (w * ratio).toInt().coerceAtLeast(1)
             val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
             bmp.eraseColor(Color.WHITE)

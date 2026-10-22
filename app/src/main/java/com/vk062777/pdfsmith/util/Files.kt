@@ -37,6 +37,15 @@ object Files {
 
     fun sanitize(name: String): String = name.replace(Regex("[^A-Za-z0-9._-]"), "_")
 
+    /** A PDF announces itself with "%PDF-" near the start (the spec allows leading junk). */
+    fun looksLikePdf(f: File): Boolean = try {
+        val head = ByteArray(1024)
+        val n = java.io.FileInputStream(f).use { it.read(head) }
+        n > 0 && String(head, 0, n, Charsets.ISO_8859_1).contains("%PDF-")
+    } catch (_: Exception) {
+        false
+    }
+
     fun copyToCache(context: Context, uri: Uri): File {
         val name = displayName(context, uri)
         val out = newFile(context, name)

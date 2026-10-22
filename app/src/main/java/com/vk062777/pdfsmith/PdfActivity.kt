@@ -96,6 +96,7 @@ abstract class PdfActivity : AppCompatActivity() {
             askPassword(res.first, onReady)
         }) {
             val f = Files.copyToCache(this, uri)
+            if (!Files.looksLikePdf(f)) error(getString(R.string.msg_not_a_pdf))
             f to com.vk062777.pdfsmith.engine.PdfEngine.needsPassword(f)
         }
     }
