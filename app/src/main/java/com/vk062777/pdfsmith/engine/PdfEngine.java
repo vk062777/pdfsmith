@@ -253,6 +253,9 @@ public final class PdfEngine {
      */
     public static void stampDisplayRasters(File src, List<Integer> pages1based,
                                           List<File> rasters, File out) throws Exception {
+        if (pages1based.size() != rasters.size()) {
+            throw new IllegalArgumentException("pages and rasters must line up");
+        }
         try (PDDocument d = open(src)) {
             for (int i = 0; i < pages1based.size(); i++) {
                 File raster = rasters.get(i);
@@ -580,13 +583,19 @@ public final class PdfEngine {
     public static void encrypt(File src, String userPassword, String ownerPassword, File out) throws Exception {
         try (PDDocument d = open(src)) {
             AccessPermission ap = new AccessPermission();
+            // Reading and printing stay allowed; changing the document does not.
             ap.setCanPrint(true);
-            ap.setCanModify(true);
+            ap.setCanPrintDegraded(true);
             ap.setCanExtractContent(true);
+            ap.setCanExtractForAccessibility(true);
+            ap.setCanModify(false);
+            ap.setCanModifyAnnotations(false);
+            ap.setCanFillInForm(false);
+            ap.setCanAssembleDocument(false);
             StandardProtectionPolicy policy = new StandardProtectionPolicy(
                     ownerPassword == null || ownerPassword.isEmpty() ? userPassword : ownerPassword,
                     userPassword == null ? "" : userPassword, ap);
-            policy.setEncryptionKeyLength(128);
+            policy.setEncryptionKeyLength(256);
             policy.setPermissions(ap);
             d.protect(policy);
             d.save(out);
@@ -940,9 +949,10 @@ public final class PdfEngine {
             IdentityHashMap<COSBase, Boolean> seen = new IdentityHashMap<>();
             int n = 0;
             int index = 0;
+            Set<Integer> only = pages1based == null ? null : new HashSet<>(pages1based);
             for (PDPage page : d.getPages()) {
                 index++;
-                if (pages1based != null && !pages1based.contains(index)) continue;
+                if (only != null && !only.contains(index)) continue;
                 PDResources res = page.getResources();
                 if (res == null) continue;
                 for (COSName name : res.getXObjectNames()) {

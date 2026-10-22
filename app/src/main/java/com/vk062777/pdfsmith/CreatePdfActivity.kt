@@ -273,6 +273,11 @@ class CreatePdfActivity : PdfActivity() {
             .show()
     }
 
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        goTo(current)
+    }
+
     private fun save() {
         val withInk = pages.any { it.items.isNotEmpty() }
         if (!withInk) { toast(getString(R.string.msg_need_selection)); return }

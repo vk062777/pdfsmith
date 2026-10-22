@@ -87,8 +87,16 @@ object AnnotRenderer {
 
     /** Rasterise the annotations for one page onto a transparent bitmap. */
     fun rasterize(items: List<Annot>, pageW: Float, pageH: Float, scale: Float): Bitmap {
-        val w = (pageW * scale).toInt().coerceAtLeast(1)
-        val h = (pageH * scale).toInt().coerceAtLeast(1)
+        var w = (pageW * scale).toInt().coerceAtLeast(1)
+        var h = (pageH * scale).toInt().coerceAtLeast(1)
+        // never allocate more than ~16 MP, whatever the page claims to be
+        val maxPixels = 16_000_000.0
+        val px = w.toDouble() * h
+        if (px > maxPixels) {
+            val s = Math.sqrt(maxPixels / px)
+            w = (w * s).toInt().coerceAtLeast(1)
+            h = (h * s).toInt().coerceAtLeast(1)
+        }
         val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
         draw(Canvas(bmp), items, pageW, pageH, scale, 0f, 0f)
         return bmp

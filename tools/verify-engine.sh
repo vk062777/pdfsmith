@@ -28,8 +28,9 @@ echo "== running engine verification =="
 java -cp "$CP" TestEngine
 
 echo "== rotation / overlay placement (rendered and pixel-checked) =="
-javac -cp "$CP" -d out TestRotate.java TestCrop.java
+javac -cp "$CP" -d out TestRotate.java TestCrop.java TestEnc.java
 java -cp "$CP" TestRotate
 java -cp "$CP" TestCrop
+java -cp "$CP" TestEnc
 python3 -m pip install --quiet pymupdf >/dev/null 2>&1 || true
 python3 verify-render.py

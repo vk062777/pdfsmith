@@ -101,4 +101,15 @@ class CropActivity : PdfActivity() {
             PdfEngine.cropPages(src, current + 1, dx, dy, dw, dh, all, out)
         }
     }
+
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        goTo(current)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        renderer?.close()
+        try { pfd?.close() } catch (_: Exception) { }
+    }
 }

@@ -35,12 +35,18 @@
             </intent-filter>
         </activity>
 
-        <activity android:name=".PagesActivity" android:exported="false" android:label="@string/tool_pages" />
-        <activity android:name=".MergeActivity" android:exported="false" android:label="@string/tool_merge" />
-        <activity android:name=".ImagesToPdfActivity" android:exported="false" android:label="@string/tool_images_pdf" />
-        <activity android:name=".AnnotateActivity" android:exported="false" android:label="@string/tool_annotate" />
-        <activity android:name=".FormsActivity" android:exported="false" android:label="@string/tool_forms" />
-        <activity android:name=".ToolsActivity" android:exported="false" />
+        <activity android:name=".PagesActivity" android:exported="false" android:label="@string/tool_pages"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode" />
+        <activity android:name=".MergeActivity" android:exported="false" android:label="@string/tool_merge"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode" />
+        <activity android:name=".ImagesToPdfActivity" android:exported="false" android:label="@string/tool_images_pdf"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode" />
+        <activity android:name=".AnnotateActivity" android:exported="false" android:label="@string/tool_annotate"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode" />
+        <activity android:name=".FormsActivity" android:exported="false" android:label="@string/tool_forms"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode" />
+        <activity android:name=".ToolsActivity" android:exported="false"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode" />
         <activity
             android:name=".CropActivity"
             android:exported="false"

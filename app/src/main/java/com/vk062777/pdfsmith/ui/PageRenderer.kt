@@ -14,6 +14,7 @@ class PageRenderer(private val renderer: PdfRenderer) {
     fun render(index: Int, targetWidth: Int, rotation: Int = 0): Bitmap {
         val page = renderer.openPage(index)
         try {
+            if (page.width <= 0 || page.height <= 0) return Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
             val ratio = page.height.toFloat() / page.width.toFloat()
             val w = targetWidth.coerceAtLeast(1)
             val h = (w * ratio).toInt().coerceAtLeast(1)

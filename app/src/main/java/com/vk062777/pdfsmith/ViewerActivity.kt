@@ -77,6 +77,11 @@ class ViewerActivity : PdfActivity() {
         adapter?.upgradePage(position, width)
     }
 
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        adapter?.invalidateAll()
+    }
+
     private fun rotate() {
         viewRotation = (viewRotation + 90) % 360
         adapter?.invalidateAll()

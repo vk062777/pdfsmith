@@ -461,6 +461,11 @@ class AnnotateActivity : PdfActivity() {
     }
 
     /** Rotate the view 90° clockwise — instant, because only one page re-renders. */
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        goTo(current)
+    }
+
     private fun rotateDocument() {
         viewRotation = (viewRotation + 90) % 360
         stamps.values.forEach { rotateItems90(it) }

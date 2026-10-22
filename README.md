@@ -49,6 +49,31 @@ Package: `com.vk062777.pdfsmith` · Display name: **NovaPDF** · Licence: Apache
 - Rounder corners, tooltips on every icon button, proper chevron/share icons, and
   security hardening (no backups, cache cleaned automatically, no cleartext traffic).
 
+
+## What's new in 1.4.0 — stability pass
+
+A full audit of the whole app, with every issue found fixed in one go:
+
+- **Your work no longer disappears when the phone rotates.** Annotate, Organize
+  pages, Merge, Images→PDF, Forms and Tools kept their state in memory only, so
+  turning the device (or unfolding it, or resizing the window) threw away the
+  loaded document, the annotations and the undo history. They now survive.
+- **Stronger protection** — password-protected PDFs now use **AES-256** (was
+  RC4-128, which is obsolete). Printing and text extraction stay allowed; editing
+  and annotating the protected file do not.
+- **Fixed a file-descriptor leak** in Crop page (the renderer and file handle were
+  never closed, so opening it many times could eventually exhaust handles).
+- **Fixed a crash risk** when a progress or success dialog tried to appear while a
+  screen was closing.
+- **Fixed a crash** on PDFs that report a zero-size page, and capped annotation
+  export so a malformed page can never exhaust memory.
+- The chosen output folder now keeps working after the app restarts.
+- Removed dead code, and a stray namespace in a dialog layout.
+
+Every build still runs 80 engine checks, plus rendered pixel checks for rotation
+and cropping, and a new check that confirms the encryption really is AES-256 and
+that a wrong password is rejected.
+
 ## Features
 
 | Tool | What it does |

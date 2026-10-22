@@ -49,7 +49,17 @@ abstract class PdfActivity : AppCompatActivity() {
 
     protected val openTreeLauncher =
         registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
-            if (uri != null) onTreeChosen(uri)
+            if (uri != null) {
+                try {
+                    contentResolver.takePersistableUriPermission(
+                        uri,
+                        android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                            android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                    )
+                } catch (_: Exception) {
+                }
+                onTreeChosen(uri)
+            }
         }
 
     private val createDocLauncher =
@@ -91,6 +101,7 @@ abstract class PdfActivity : AppCompatActivity() {
     }
 
     private fun askPassword(file: File, onReady: (File) -> Unit) {
+        if (isFinishing || isDestroyed) return
         val v = layoutInflater.inflate(R.layout.dialog_password, null)
         val input = v.findViewById<android.widget.EditText>(R.id.pwInput)
         val dialog = AlertDialog.Builder(this)
@@ -128,6 +139,7 @@ abstract class PdfActivity : AppCompatActivity() {
 
     /** A friendly "all done" popup with Open / Share / Close. */
     protected fun showSuccess(message: String, file: File?, mime: String = "application/pdf") {
+        if (isFinishing || isDestroyed) return
         val view = layoutInflater.inflate(R.layout.dialog_success, null)
         view.findViewById<TextView>(R.id.successMsg).text = message
 
