@@ -3,7 +3,7 @@
 
     <!-- Default accent: Indigo. The Theme.PDFsmith.* overlays below re-tint the
          whole app (toolbars, headers, icons) by overriding colorPrimary. -->
-    <style name="Theme.PDFsmith" parent="Theme.Material3.DayNight.NoActionBar">
+    <style name="Theme.PDFsmith" parent="Theme.Material3Expressive.DayNight.NoActionBar">
         <item name="colorPrimary">#FF3B5BDB</item>
         <item name="colorOnPrimary">@color/white</item>
         <item name="colorPrimaryContainer">#FFDDE4FF</item>
@@ -19,11 +19,11 @@
         <item name="android:windowAnimationStyle">@style/Animation.PDFsmith</item>
         <item name="textInputStyle">@style/Widget.KavoPDF.TextInput</item>
         <!-- Material 3 Expressive: a larger, softer shape scale, and pill buttons -->
-        <item name="shapeCornerExtraSmall">6dp</item>
-        <item name="shapeCornerSmall">10dp</item>
-        <item name="shapeCornerMedium">16dp</item>
-        <item name="shapeCornerLarge">22dp</item>
-        <item name="shapeCornerExtraLarge">30dp</item>
+        <item name="shapeAppearanceCornerExtraSmall">6dp</item>
+        <item name="shapeAppearanceCornerSmall">10dp</item>
+        <item name="shapeAppearanceCornerMedium">16dp</item>
+        <item name="shapeAppearanceCornerLarge">22dp</item>
+        <item name="shapeAppearanceCornerExtraLarge">30dp</item>
         <item name="materialButtonStyle">@style/Widget.KavoPDF.Button</item>
         <item name="alertDialogTheme">@style/ThemeOverlay.KavoPDF.Dialog</item>
         <item name="materialAlertDialogTheme">@style/ThemeOverlay.KavoPDF.Dialog</item>
