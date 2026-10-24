@@ -1267,6 +1267,13 @@ public final class PdfEngine {
      */
     public static void addLinkIcon(File src, int page1, float xd, float yd, float size,
                                    File iconPng, String url, File out) throws Exception {
+        addLinkIcon(src, page1, xd, yd, size, iconPng, url, 1f, out);
+    }
+
+    /** As above, with an opacity for the drawn icon (1 = fully solid). */
+    public static void addLinkIcon(File src, int page1, float xd, float yd, float size,
+                                   File iconPng, String url, float opacity,
+                                   File out) throws Exception {
         String u = normaliseUrl(url);
         if (u == null) throw new IllegalArgumentException("Not a valid link");
         try (PDDocument d = open(src)) {
@@ -1297,6 +1304,7 @@ public final class PdfEngine {
                              new PDPageContentStream(d, page, AppendMode.APPEND, true, true)) {
                     cs.saveGraphicsState();
                     cs.transform(m);
+                    applyOpacity(cs, opacity);
                     cs.drawImage(icon, xd, dh - yd - s, s, s);
                     cs.restoreGraphicsState();
                 }
@@ -1315,6 +1323,15 @@ public final class PdfEngine {
             page.getAnnotations().add(link);
             d.save(out);
         }
+    }
+
+    /** Apply a non-stroking alpha, used for the opacity of drawn link art. */
+    private static void applyOpacity(PDPageContentStream cs, float opacity) throws java.io.IOException {
+        float a = Math.max(0.05f, Math.min(1f, opacity));
+        if (a >= 1f) return;
+        PDExtendedGraphicsState gs = new PDExtendedGraphicsState();
+        gs.setNonStrokingAlphaConstant(a);
+        cs.setGraphicsStateParameters(gs);
     }
 
     /** The standard PDF fonts offered for custom link text. */
@@ -1341,6 +1358,13 @@ public final class PdfEngine {
     public static void addTextLink(File src, int page1, float xd, float yd, float size,
                                    String text, String fontName, int argb,
                                    String url, File out) throws Exception {
+        addTextLink(src, page1, xd, yd, size, text, fontName, argb, url, 1f, out);
+    }
+
+    /** As above, with an opacity for the drawn text (1 = fully solid). */
+    public static void addTextLink(File src, int page1, float xd, float yd, float size,
+                                   String text, String fontName, int argb,
+                                   String url, float opacity, File out) throws Exception {
         String u = normaliseUrl(url);
         if (u == null) throw new IllegalArgumentException("Not a valid link");
         String safe = winAnsi(text);
@@ -1375,6 +1399,7 @@ public final class PdfEngine {
             }
             try (PDPageContentStream cs =
                          new PDPageContentStream(d, page, AppendMode.APPEND, true, true)) {
+                applyOpacity(cs, opacity);
                 cs.beginText();
                 cs.setFont(font, sz);
                 cs.setNonStrokingColor((argb >> 16) & 0xFF, (argb >> 8) & 0xFF, argb & 0xFF);

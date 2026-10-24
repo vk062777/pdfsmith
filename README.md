@@ -259,6 +259,23 @@ unguarded activity launches, resource leaks and permission changes. Two real
 robustness issues were found and fixed (above). The app still requests no
 permissions at all, enforced by the CI guard.
 
+
+## What's new in 1.10.0 — placement fix and opacity
+
+- **Fixed: link text did not land where you placed it.** The page selection only
+  accepted a drag that started *inside* the small default box, so a drag anywhere
+  else on the page was ignored and the link always went to the top-left corner. You
+  can now **tap or drag anywhere on the page** and the selection jumps to that spot
+  and follows your finger. This applies to both link icons and link text.
+- **Opacity.** Both the link icon and the custom link text now have an opacity
+  control (0-100%). Verified by rendering: at 40% both are measurably lighter than
+  at 100% (text saturation 192 -> 77, icon 136 -> 54).
+
+### Verification added
+
+- A rendered opacity check: for both the icon and the text, 40% must come out
+  visibly lighter than 100%.
+
 ## Features
 
 | Tool | What it does |

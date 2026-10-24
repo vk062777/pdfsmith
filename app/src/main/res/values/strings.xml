@@ -260,4 +260,6 @@
     <string name="links_manual_text_hint">Choose a page, drag where the text should go, type the text and the address.</string>
     <string name="image_ocr_copy">Copy recognised text</string>
     <string name="image_ocr_copied">Text copied \u2014 paste it anywhere</string>
+    <string name="hint_link_opacity">Opacity %</string>
+    <string name="label_link_opacity">Link opacity</string>
 </resources>

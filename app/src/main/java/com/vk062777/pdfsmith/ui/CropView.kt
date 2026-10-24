@@ -24,6 +24,10 @@ class CropView @JvmOverloads constructor(
 
     var imageView: ImageView? = null
 
+    /** When true, a tap outside the selection moves it there and starts dragging.
+     *  Used for placing link icons / link text, where you point at where it goes. */
+    var moveOnTapOutside = false
+
     /** left, top, right, bottom in 0..1 of the displayed page. */
     private var l = 0.08f
     private var t = 0.08f
@@ -104,6 +108,19 @@ class CropView @JvmOverloads constructor(
                     abs(x - rect.left) < near && abs(y - rect.bottom) < near -> 4
                     abs(x - rect.right) < near && abs(y - rect.bottom) < near -> 5
                     rect.contains(x, y) -> 1
+                    moveOnTapOutside -> {
+                        // centre the selection on the tap, then drag from there
+                        val w = r - l
+                        val h = b - t
+                        val nx = (x - pr.left) / pr.width() - w / 2f
+                        val ny = (y - pr.top) / pr.height() - h / 2f
+                        l = nx.coerceIn(0f, 1f - w)
+                        t = ny.coerceIn(0f, 1f - h)
+                        r = l + w
+                        b = t + h
+                        invalidate()
+                        1
+                    }
                     else -> 0
                 }
                 lastX = x; lastY = y

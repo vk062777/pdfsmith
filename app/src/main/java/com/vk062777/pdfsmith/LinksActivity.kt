@@ -41,6 +41,8 @@ class LinksActivity : PdfActivity() {
         setSupportActionBar(binding.toolbar)
         binding.toolbar.setNavigationOnClickListener { finish() }
         binding.rectPick.imageView = binding.pageImage
+        // pointing anywhere on the page should place the link there
+        binding.rectPick.moveOnTapOutside = true
 
         binding.btnChoose.setOnClickListener { pickPdf() }
         binding.prevPage.setOnClickListener { goTo(current - 1) }
@@ -191,8 +193,10 @@ class LinksActivity : PdfActivity() {
         if (manual) applyKind() else {
             binding.textWrap.visibility = android.view.View.GONE
             binding.fontRow.visibility = android.view.View.GONE
+            binding.opacityRow.visibility = android.view.View.GONE
         }
         binding.colourRow.visibility = if (manual) android.view.View.VISIBLE else android.view.View.GONE
+        binding.opacityRow.visibility = if (manual) android.view.View.VISIBLE else android.view.View.GONE
         if (manual) {
             if (pageCount > 0) goTo(current) else pickPdf()
         }
@@ -225,6 +229,8 @@ class LinksActivity : PdfActivity() {
             val url = binding.urlInput.text?.toString().orEmpty().trim()
             if (PdfEngine.normaliseUrl(url) == null) return toast(getString(R.string.msg_invalid_link))
             val size = sizes.getOrNull(current) ?: floatArrayOf(595f, 842f)
+            val opacity = ((binding.opacityInput.text?.toString()?.toFloatOrNull() ?: 100f) / 100f)
+                .coerceIn(0.05f, 1f)
             val rect = binding.rectPick.cropRect()
             val x = rect[0] * size[0]
             val y = rect[1] * size[1]
@@ -238,7 +244,7 @@ class LinksActivity : PdfActivity() {
                 val fonts = PdfEngine.LINK_FONTS
                 val font = fonts[binding.fontSpinner.selectedItemPosition.coerceIn(0, fonts.size - 1)]
                 runAndSave(Files.suggestName(sourceName, "_links")) { out ->
-                    PdfEngine.addTextLink(src, current + 1, x, y, size, body, font, chosenColour, url, out)
+                    PdfEngine.addTextLink(src, current + 1, x, y, size, body, font, chosenColour, url, opacity, out)
                 }
                 return
             }
@@ -248,7 +254,7 @@ class LinksActivity : PdfActivity() {
                 makeIcon(chosenColour).compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)
             }
             runAndSave(Files.suggestName(sourceName, "_links")) { out ->
-                PdfEngine.addLinkIcon(src, current + 1, x, y, side, icon, url, out)
+                PdfEngine.addLinkIcon(src, current + 1, x, y, side, icon, url, opacity, out)
             }
             return
         }
