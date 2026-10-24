@@ -168,7 +168,7 @@ class ToolsActivity : PdfActivity() {
             setPadding(dp(18), dp(14), dp(18), dp(14))
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
-            ).also { it.topMargin = dp(10) }
+            ).also { it.topMargin = dp(16) }
             setTextColor(getColor(R.color.text_primary))
             setHintTextColor(getColor(R.color.text_secondary))
             textSize = 15f
@@ -224,12 +224,15 @@ class ToolsActivity : PdfActivity() {
             orientation = LinearLayout.VERTICAL
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
-            ).also { it.topMargin = dp(12) }
+            ).also { it.topMargin = dp(16) }
         }
         box.addView(TextView(this).apply {
             text = label
             textSize = 12f
             setTextColor(getColor(R.color.text_secondary))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT
+            ).also { it.bottomMargin = dp(6) }
         })
         // inflated from a layout so the pill shape and the rounded drop-down are
         // declared once, in XML
@@ -247,7 +250,7 @@ class ToolsActivity : PdfActivity() {
             isChecked = checked
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
-            ).also { it.topMargin = dp(12) }
+            ).also { it.topMargin = dp(16) }
         }
         binding.params.addView(sw)
         return sw

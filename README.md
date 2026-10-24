@@ -598,3 +598,16 @@ anything else (INTERNET included) creeps in.
   pre-filled with "0" and "0.25" - they are empty now, and the same sensible
   defaults still apply when you leave them blank. The page-number fields got the
   same treatment.
+## What's new in 2.2.4
+
+- **Even spacing between the rows of the tool forms.** Two problems, both in the
+  code that builds those forms rather than in any layout:
+  a spinner's label had no gap at all to the spinner beneath it (so "Compression
+  level" looked stuck to the list), and the pill fields used a 10dp gap while the
+  spinner blocks used 12dp plus a label, so the rhythm did not match. Every row now
+  uses the same 16dp gap, with 6dp between a label and its field.
+  This affects the ten tools hosted by the tool screen - watermark, compress,
+  protect, unlock, sign, verify, metadata, extract, page numbers, split - and forms.
+- Checked the rest of the app for the same fault: no layout has two filled rows
+  sitting flush against each other, and the home tiles are evenly spaced at 6dp.
+  Nothing else was changed.

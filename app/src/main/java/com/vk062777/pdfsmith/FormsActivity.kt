@@ -74,7 +74,7 @@ class FormsActivity : PdfActivity() {
         val lp = LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
         )
-        lp.topMargin = dp(12)
+        lp.topMargin = dp(16)
         label.layoutParams = lp
         binding.container.addView(label)
 
