@@ -32,13 +32,6 @@ class ImageOcrActivity : PdfActivity() {
     /** The text recognised so far, so it can be copied anywhere. */
     private var recognisedText = ""
 
-    private fun copyText() {
-        if (recognisedText.isBlank()) return toast(getString(R.string.image_ocr_none))
-        val cm = getSystemService(android.content.Context.CLIPBOARD_SERVICE)
-                as android.content.ClipboardManager
-        cm.setPrimaryClip(android.content.ClipData.newPlainText("KavoPDF OCR", recognisedText))
-        toast(getString(R.string.image_ocr_copied))
-    }
 
     private val recogniser: TextRecognizer by lazy {
         TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
@@ -52,7 +45,6 @@ class ImageOcrActivity : PdfActivity() {
         binding.toolbar.setNavigationOnClickListener { finish() }
         binding.btnChoose.setOnClickListener { pickImages() }
         binding.btnRun.setOnClickListener { run() }
-        binding.btnCopy.setOnClickListener { copyText() }
         pickAfterEnter { pickImages() }
     }
 
@@ -98,7 +90,6 @@ class ImageOcrActivity : PdfActivity() {
             recognisedText = text.toString()
             val chars = recognisedText.count { !it.isWhitespace() }
             binding.info.text = getString(R.string.image_ocr_chars, pages.size, chars)
-            binding.btnCopy.isEnabled = recognisedText.isNotBlank()
             if (pages.isEmpty()) {
                 toast(getString(R.string.image_ocr_none))
                 return@launch

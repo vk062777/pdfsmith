@@ -14,7 +14,8 @@ object ThemeUtil {
         "Teal" to R.style.Theme_PDFsmith_Teal,
         "Violet" to R.style.Theme_PDFsmith_Violet,
         "Green" to R.style.Theme_PDFsmith_Green,
-        "Crimson" to R.style.Theme_PDFsmith_Crimson
+        "Crimson" to R.style.Theme_PDFsmith_Crimson,
+        "Amber" to R.style.Theme_PDFsmith_Amber
     )
 
     @StyleRes

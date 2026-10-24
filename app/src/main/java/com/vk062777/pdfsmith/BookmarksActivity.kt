@@ -94,13 +94,17 @@ class BookmarksActivity : PdfActivity() {
             hint = getString(R.string.bookmark_title)
             setText(title)
             inputType = InputType.TYPE_CLASS_TEXT
+            background = getDrawable(R.drawable.bg_field_pill)
+            setPadding(dp(16), dp(12), dp(16), dp(12))
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
         }
         val pg = EditText(this).apply {
             hint = getString(R.string.bookmark_page)
             setText(page.toString())
             inputType = InputType.TYPE_CLASS_NUMBER
-            layoutParams = LinearLayout.LayoutParams(dp(84), LinearLayout.LayoutParams.WRAP_CONTENT)
+            background = getDrawable(R.drawable.bg_field_pill)
+            setPadding(dp(14), dp(12), dp(14), dp(12))
+            layoutParams = LinearLayout.LayoutParams(dp(88), LinearLayout.LayoutParams.WRAP_CONTENT)
         }
         val del = TextView(this).apply {
             text = "\u2715"

@@ -222,9 +222,11 @@ abstract class PdfActivity : AppCompatActivity() {
      * the whole thing visibly stutters.
      */
     protected fun pickAfterEnter(block: () -> Unit) {
-        window.decorView.postDelayed({
-            if (!isFinishing && !isDestroyed) block()
-        }, 260L)
+        // Open straight away - a delay here just makes the screen feel slow. The
+        // stutter came from this screen sliding in while the picker opened, so we
+        // drop this screen's own animation instead of postponing the picker.
+        window.setWindowAnimations(R.style.Animation_KavoPDF_None)
+        block()
     }
 
     private fun takePersist(uri: Uri) {

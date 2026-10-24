@@ -49,10 +49,13 @@ class ZoomableImageView @JvmOverloads constructor(
                 val old = zoom
                 zoom = (zoom * detector.scaleFactor).coerceIn(minZoom, maxZoom)
                 val f = zoom / old
+                // Keep whatever is under the fingers under the fingers. The old
+                // form scaled tx by 1 instead of f, so as soon as the page had been
+                // panned the zoom drifted back toward the middle.
                 val cx = detector.focusX - width / 2f
                 val cy = detector.focusY - height / 2f
-                tx -= cx * (f - 1f)
-                ty -= cy * (f - 1f)
+                tx = f * tx + (1f - f) * cx
+                ty = f * ty + (1f - f) * cy
                 apply()
                 notifyZoom()
                 return true

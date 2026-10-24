@@ -65,7 +65,10 @@ class CreatePdfActivity : PdfActivity() {
         binding.toolPen.setOnClickListener { selectTool(OverlayView.Tool.PEN, binding.toolPen) }
         binding.toolHighlight.setOnClickListener { selectTool(OverlayView.Tool.HIGHLIGHT, binding.toolHighlight) }
         binding.toolText.setOnClickListener { selectTool(OverlayView.Tool.TEXT, binding.toolText) }
-        binding.toolImage.setOnClickListener { selectTool(OverlayView.Tool.IMAGE, binding.toolImage) }
+        binding.toolImage.setOnClickListener {
+            selectTool(OverlayView.Tool.IMAGE, binding.toolImage)
+            startImage(0.5f, 0.5f)      // open the picker straight away
+        }
         binding.toolMove.setOnClickListener { selectTool(OverlayView.Tool.SELECT, binding.toolMove) }
         binding.toolErase.setOnClickListener { selectTool(OverlayView.Tool.ERASE, binding.toolErase) }
 

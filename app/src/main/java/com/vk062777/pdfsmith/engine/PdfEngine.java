@@ -1690,7 +1690,153 @@ public final class PdfEngine {
     }
 
     // ------------------------------------------------------------------
-    // Plain-text report (used by the activity-log export)
+    // Designed report (used by the activity-log export)
+    // ------------------------------------------------------------------
+
+    /** One column of a report table. */
+    public static final class Column {
+        public final String title;
+        public final float weight;
+        public Column(String title, float weight) { this.title = title; this.weight = weight; }
+    }
+
+    private static final float R_MARGIN = 42f;
+
+    /**
+     * A designed, printable report: a coloured header band, a facts card, a
+     * striped table, and a footer. Everything is vector-drawn, so it stays crisp
+     * at any zoom.
+     */
+    public static void report(File out, String brand, String title, String subtitle,
+                              List<String[]> facts, List<Column> columns,
+                              List<String[]> rows, String footer, int accentArgb)
+            throws Exception {
+        final float pageW = PDRectangle.A4.getWidth(), pageH = PDRectangle.A4.getHeight();
+        final float contentW = pageW - R_MARGIN * 2f;
+        final float body = 10f, small = 8.5f, leading = 14f;
+        float ar = ((accentArgb >> 16) & 0xFF) / 255f;
+        float ag = ((accentArgb >> 8) & 0xFF) / 255f;
+        float ab = (accentArgb & 0xFF) / 255f;
+
+        try (PDDocument d = new PDDocument()) {
+            PDFont font = PDType1Font.HELVETICA, bold = PDType1Font.HELVETICA_BOLD;
+            PDPage page = new PDPage(PDRectangle.A4);
+            d.addPage(page);
+            PDPageContentStream cs = new PDPageContentStream(d, page);
+
+            // ---- header band ----
+            float bandH = 96f;
+            cs.setNonStrokingColor(ar, ag, ab);
+            cs.addRect(0, pageH - bandH, pageW, bandH);
+            cs.fill();
+            textAt(cs, bold, 9f, R_MARGIN, pageH - 30f, brand, 1f, 1f, 1f);
+            textAt(cs, bold, 21f, R_MARGIN, pageH - 56f, title, 1f, 1f, 1f);
+            if (subtitle != null && !subtitle.isEmpty()) {
+                textAt(cs, font, 10f, R_MARGIN, pageH - 76f, subtitle, 1f, 1f, 1f);
+            }
+            float y = pageH - bandH - 26f;
+
+            // ---- facts card ----
+            if (facts != null && !facts.isEmpty()) {
+                float cardH = 16f + facts.size() * 17f;
+                cs.setNonStrokingColor(0.965f, 0.968f, 0.976f);
+                fillRounded(cs, R_MARGIN, y - cardH, contentW, cardH, 12f);
+                float fy = y - 22f;
+                for (String[] f : facts) {
+                    textAt(cs, bold, small, R_MARGIN + 14f, fy, f[0], 0.13f, 0.15f, 0.19f);
+                    textAt(cs, font, small, R_MARGIN + 120f, fy, f.length > 1 ? f[1] : "",
+                            0.34f, 0.37f, 0.42f);
+                    fy -= 17f;
+                }
+                y -= cardH + 22f;
+            }
+
+            // ---- table ----
+            if (columns != null && !columns.isEmpty()) {
+                float totalW = 0f;
+                for (Column c : columns) totalW += c.weight;
+                float[] colW = new float[columns.size()];
+                for (int i = 0; i < columns.size(); i++) colW[i] = contentW * columns.get(i).weight / totalW;
+
+                // header row
+                cs.setNonStrokingColor(ar * 0.14f + 0.86f, ag * 0.14f + 0.86f, ab * 0.14f + 0.86f);
+                fillRounded(cs, R_MARGIN, y - 22f, contentW, 22f, 8f);
+                float hx = R_MARGIN + 10f;
+                for (int i = 0; i < columns.size(); i++) {
+                    textAt(cs, bold, small, hx, y - 15f, columns.get(i).title, 0.13f, 0.15f, 0.19f);
+                    hx += colW[i];
+                }
+                y -= 30f;
+
+                int n = rows == null ? 0 : rows.size();
+                for (int r = 0; r < n; r++) {
+                    if (y < R_MARGIN + 40f) {
+                        cs.close();
+                        page = new PDPage(PDRectangle.A4);
+                        d.addPage(page);
+                        cs = new PDPageContentStream(d, page);
+                        y = pageH - R_MARGIN;
+                    }
+                    if (r % 2 == 1) {
+                        cs.setNonStrokingColor(0.976f, 0.980f, 0.988f);
+                        cs.addRect(R_MARGIN, y - 15f, contentW, 18f);
+                        cs.fill();
+                    }
+                    String[] row = rows.get(r);
+                    float rx = R_MARGIN + 10f;
+                    for (int i = 0; i < columns.size() && i < row.length; i++) {
+                        String cell = row[i] == null ? "" : row[i];
+                        float size = small;
+                        // status column: green for OK, red for FAIL
+                        if ("OK".equals(cell)) textAt(cs, bold, size, rx, y - 10f, cell, 0.09f, 0.55f, 0.26f);
+                        else if ("FAIL".equals(cell)) textAt(cs, bold, size, rx, y - 10f, cell, 0.78f, 0.16f, 0.16f);
+                        else if (i == 0) textAt(cs, font, size, rx, y - 10f, cell, 0.44f, 0.47f, 0.52f);
+                        else textAt(cs, font, size, rx, y - 10f, fit(cell, colW[i] - 12f, font, size),
+                                     0.20f, 0.22f, 0.27f);
+                        rx += colW[i];
+                    }
+                    y -= 18f;
+                }
+            }
+
+            // ---- footer ----
+            if (footer != null && !footer.isEmpty()) {
+                textAt(cs, font, 8f, R_MARGIN, R_MARGIN - 14f, footer, 0.55f, 0.58f, 0.63f);
+            }
+            cs.close();
+            d.save(out);
+        }
+    }
+
+    private static void fillRounded(PDPageContentStream cs, float x, float y, float w, float h, float r)
+            throws Exception {
+        // four corner arcs plus a cross - a simple, reliable rounded rectangle
+        float k = r * 0.5523f;
+        cs.moveTo(x + r, y);
+        cs.lineTo(x + w - r, y);
+        cs.curveTo(x + w - r + k, y, x + w, y + r - k, x + w, y + r);
+        cs.lineTo(x + w, y + h - r);
+        cs.curveTo(x + w, y + h - r + k, x + w - r + k, y + h, x + w - r, y + h);
+        cs.lineTo(x + r, y + h);
+        cs.curveTo(x + r - k, y + h, x, y + h - r + k, x, y + h - r);
+        cs.lineTo(x, y + r);
+        cs.curveTo(x, y + r - k, x + r - k, y, x + r, y);
+        cs.closePath();
+        cs.fill();
+    }
+
+    /** Shorten a cell so it cannot spill into the next column. */
+    private static String fit(String s, float maxW, PDFont f, float size) throws Exception {
+        String t = winAnsi(s);
+        if (f.getStringWidth(t) / 1000f * size <= maxW) return t;
+        while (t.length() > 1 && f.getStringWidth(t + "\u2026") / 1000f * size > maxW) {
+            t = t.substring(0, t.length() - 1);
+        }
+        return t + "...";
+    }
+
+    // ------------------------------------------------------------------
+    // Plain-text report (kept for simple exports)
     // ------------------------------------------------------------------
 
     /** Lay wrapped text out into a clean, multi-page A4 PDF. */
@@ -1736,6 +1882,14 @@ public final class PdfEngine {
         cs.newLineAtOffset(x, y);
         cs.showText(winAnsi(s));
         cs.endText();
+    }
+
+    /** Text with an explicit colour. Filling a shape leaves the fill colour set,
+     *  so anything drawn after a fill must say what colour it wants. */
+    private static void textAt(PDPageContentStream cs, PDFont f, float size,
+                               float x, float y, String s, float r, float g, float b) throws Exception {
+        cs.setNonStrokingColor(r, g, b);
+        textAt(cs, f, size, x, y, s);
     }
 
     private static List<String> wrapText(String s, PDFont f, float size, float maxW) throws Exception {

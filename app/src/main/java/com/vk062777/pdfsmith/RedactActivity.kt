@@ -39,7 +39,6 @@ class RedactActivity : PdfActivity() {
     private var current = 0
     private val sizes = mutableListOf<FloatArray>()
     private val marks = HashMap<Int, MutableList<RectF>>()
-    private var zooming = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -48,10 +47,11 @@ class RedactActivity : PdfActivity() {
         setSupportActionBar(binding.toolbar)
         binding.toolbar.setNavigationOnClickListener { finish() }
         binding.redactView.imageView = binding.pageImage
+        // one finger draws, two fingers pinch - so no single-finger panning
+        binding.pageImage.panEnabled = false
         binding.btnChoose.setOnClickListener { pickPdf() }
         binding.prevPage.setOnClickListener { goTo(current - 1) }
         binding.nextPage.setOnClickListener { goTo(current + 1) }
-        binding.btnZoom.setOnClickListener { toggleZoom() }
         binding.btnClear.setOnClickListener {
             binding.redactView.clear()
             marks.remove(current)
@@ -60,20 +60,6 @@ class RedactActivity : PdfActivity() {
         pickAfterEnter { pickPdf() }
     }
 
-    /**
-     * Two jobs want the same finger: drawing boxes and zooming. A toggle keeps it
-     * unambiguous - in zoom mode you pinch and pan, in mark mode you draw. The zoom
-     * is kept when you switch back, so you can zoom in and then mark precisely.
-     */
-    private fun toggleZoom() {
-        zooming = !zooming
-        binding.redactView.drawingEnabled = !zooming
-        binding.pageImage.panEnabled = zooming
-        binding.btnZoom.setImageResource(if (zooming) R.drawable.ic_check else R.drawable.ic_zoom)
-        binding.info.text = if (zooming) getString(R.string.redact_zoom_on)
-        else getString(R.string.redact_intro)
-        binding.redactView.invalidate()
-    }
 
     override fun onPdfChosen(uri: Uri) {
         sourceName = Files.displayName(this, uri)

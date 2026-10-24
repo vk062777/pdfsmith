@@ -85,6 +85,15 @@ class RedactView @JvmOverloads constructor(
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
+        // The image view gets every event so pinch-zoom keeps working...
+        imageView?.onTouchEvent(event)
+        // ...but two fingers mean zoom, never a redaction box.
+        if (event.pointerCount >= 2) {
+            drawing = null
+            tapTarget = null
+            invalidate()
+            return true
+        }
         if (!drawingEnabled) return false
         val pr = RectF()
         if (!pageRect(pr)) return false

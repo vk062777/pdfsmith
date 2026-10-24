@@ -75,7 +75,12 @@ class AnnotateActivity : PdfActivity() {
         binding.toolText.setOnClickListener { selectTool(OverlayView.Tool.TEXT, binding.toolText) }
         binding.toolCover.setOnClickListener { selectTool(OverlayView.Tool.COVER, binding.toolCover) }
         binding.toolSign.setOnClickListener { selectTool(OverlayView.Tool.SIGN, binding.toolSign) }
-        binding.toolImage.setOnClickListener { selectTool(OverlayView.Tool.IMAGE, binding.toolImage) }
+        binding.toolImage.setOnClickListener {
+            selectTool(OverlayView.Tool.IMAGE, binding.toolImage)
+            // open the picker straight away - picking a spot on the page is a
+            // second way in, not a required first step
+            startStamp(0.5f, 0.5f)
+        }
         binding.toolMove.setOnClickListener { selectTool(OverlayView.Tool.SELECT, binding.toolMove) }
         binding.toolErase.setOnClickListener { selectTool(OverlayView.Tool.ERASE, binding.toolErase) }
 

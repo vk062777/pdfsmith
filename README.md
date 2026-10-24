@@ -509,3 +509,29 @@ teal background behind the new K.
 Fixed for good: the icon generator now writes `values/launcher.xml` itself, next to
 the artwork, so the background colour and the K can never drift apart again. The
 shipped background is `#FF15181D`.
+## What's new in 2.1.0
+
+- **The file picker opens straight away again.** 2.0.1 delayed it so the screen
+  could finish animating; that made every tool feel slow. Now the picker opens
+  immediately and the tool screen simply does not animate in, so nothing fights.
+- **Image to searchable PDF:** the "copy recognised text" button is gone.
+- **Protect PDF:** back to a single password - the owner password and the
+  permission list are removed.
+- **The activity-log export is a designed report** - a coloured header band, a
+  facts card, a striped table with green/red results, and a footer.
+- **Input fields are pills everywhere**, set once in the theme.
+- **Redact:** the zoom button is gone. Two fingers pinch-zoom, one finger draws a
+  redaction box.
+- **Reader zoom now follows your fingers** instead of drifting to the middle.
+- **Annotate / Create PDF:** the pen-thickness row fits the screen (it was cut
+  off), and the image tool opens the picker immediately.
+- **Every in-app icon is now the current Material Symbols Rounded set** (49 icons
+  fetched from Google's own source), drawn a little larger and consistent
+  throughout - the same action always uses the same glyph.
+- **Material 3 Expressive:** the Material library moves to 1.14.0 with the
+  expressive shape scale and pill buttons.
+- **A new "Amber" theme** matching the launcher mark, and toolbars now follow the
+  theme's on-primary colour so light accents stay readable.
+
+Verified on every build: the report's structure and colour, that the chosen font
+really reaches the PDF, plus everything from before.
