@@ -188,25 +188,6 @@ class RedactActivity : PdfActivity() {
         return out
     }
 
-    /** Paint the marked boxes solid black, with a margin so no edge can bleed. */
-    private fun paintBlack(bmp: Bitmap, boxes: List<RectF>): Bitmap {
-        val out = bmp.copy(Bitmap.Config.ARGB_8888, true) ?: return bmp
-        val c = Canvas(out)
-        val p = Paint().apply {
-            color = Color.BLACK
-            style = Paint.Style.FILL
-            isAntiAlias = false
-        }
-        val pad = 8f
-        for (b in boxes) {
-            c.drawRect(
-                b.left * out.width - pad, b.top * out.height - pad,
-                b.right * out.width + pad, b.bottom * out.height + pad, p
-            )
-        }
-        return out
-    }
-
     override fun onDestroy() {
         super.onDestroy()
         renderer?.close()
