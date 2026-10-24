@@ -214,6 +214,49 @@ permission guard.
   (0.32% of the page) and must carry the right address.
 - Search timing is measured on a 200-page document.
 
+
+## What's new in 1.9.0 — custom link text, copyable OCR, audit
+
+- **Custom link text.** On the Hyperlinks screen you can now write your own text on
+  any page — choose the font (Helvetica, Helvetica Bold, Times, Times Bold,
+  Courier), the size, and one of five colours — and attach a web address to it.
+  Tapping the text opens the link; tapping anywhere else does nothing. Verified by
+  rendering: the text is visible, drawn in the chosen colour, and the link covers
+  only that text, on all four page rotations.
+- **Removed** the "Save recognised text (.txt)" action, as asked.
+- **Copy recognised text.** Image OCR now has a "Copy recognised text" action, so
+  text that was trapped inside a photo or screenshot can be pasted anywhere.
+- **Audit fixes.** Removed a `!!` that could crash the page organiser, guarded the
+  tool launcher and the share sheet so a missing target cannot take the app down.
+
+### Technology review
+
+Checked every dependency and format against what is current:
+
+- PDF encryption: **AES-256** (already upgraded from RC4-128).
+- Digital signatures: **SHA-256 + RSA-2048 + CMS/PKCS#7** — current practice.
+- On-device OCR: **ML Kit text-recognition 16.0.1** — the latest release.
+- PDF engine: **PDFBox 2.0.27.0** — the latest Android release.
+- Upgraded: coroutines 1.8.1 -> **1.11.0**, constraintlayout 2.1.4 -> **2.2.2**,
+  documentfile 1.0.1 -> **1.1.0**.
+
+  The remaining AndroidX libraries do have newer releases, but each one now declares
+  a minimum `compileSdk` of 35-37 (read from the libraries' own AAR metadata:
+  core-ktx 1.19.1 wants 37, activity 1.13.0 wants 36, recyclerview 1.4.0 wants 35).
+  Taking those means bumping the Android Gradle Plugin and the compile SDK — a
+  toolchain change that alters build behaviour and cannot be verified without a
+  device, for no functional gain. `targetSdk` stays at 34 for the same reason: the
+  app already installs and runs on Android 17, and raising it would opt into
+  behaviour changes that need on-device testing.
+
+### Audit
+
+Every one of the 20 tools was checked to be reachable, dispatched and backed by a
+real screen. Swept the whole codebase again for null dereferences, index errors,
+unguarded activity launches, resource leaks and permission changes. Two real
+robustness issues were found and fixed (above). The app still requests no
+permissions at all, enforced by the CI guard.
+
 ## Features
 
 | Tool | What it does |

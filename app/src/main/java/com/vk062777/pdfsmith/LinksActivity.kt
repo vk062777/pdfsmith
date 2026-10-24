@@ -50,8 +50,26 @@ class LinksActivity : PdfActivity() {
             if (checked) applyMode(id == R.id.modeManual)
         }
         binding.modeGroup.check(R.id.modeAuto)
+        binding.kindGroup.check(R.id.kindIcon)
+        binding.kindGroup.addOnButtonCheckedListener { _, _, checked ->
+            if (checked) applyKind()
+        }
+        binding.fontSpinner.adapter = android.widget.ArrayAdapter(
+            this, android.R.layout.simple_spinner_dropdown_item, PdfEngine.LINK_FONTS
+        )
         buildColourRow()
         pickPdf()
+    }
+
+    /** Icon vs custom text for the manual link. */
+    private fun applyKind() {
+        val text = binding.kindText.isChecked
+        binding.textWrap.visibility = if (text) android.view.View.VISIBLE else android.view.View.GONE
+        binding.fontRow.visibility = if (text) android.view.View.VISIBLE else android.view.View.GONE
+        if (binding.modeManual.isChecked) {
+            binding.info.text = if (text) getString(R.string.links_manual_text_hint)
+            else getString(R.string.links_manual_hint)
+        }
     }
 
     // ---- icon colour -------------------------------------------------------
@@ -162,9 +180,17 @@ class LinksActivity : PdfActivity() {
     private fun applyMode(manual: Boolean) {
         binding.manualWrap.visibility = if (manual) View.VISIBLE else View.GONE
         binding.listWrap.visibility = if (manual) View.GONE else View.VISIBLE
-        binding.info.text = if (manual) getString(R.string.links_manual_hint) else {
+        binding.info.text = if (manual) {
+            if (binding.kindText.isChecked) getString(R.string.links_manual_text_hint)
+            else getString(R.string.links_manual_hint)
+        } else {
             if (found.isEmpty()) getString(R.string.links_none)
             else getString(R.string.links_found, found.size)
+        }
+        binding.kindGroup.visibility = if (manual) android.view.View.VISIBLE else android.view.View.GONE
+        if (manual) applyKind() else {
+            binding.textWrap.visibility = android.view.View.GONE
+            binding.fontRow.visibility = android.view.View.GONE
         }
         binding.colourRow.visibility = if (manual) android.view.View.VISIBLE else android.view.View.GONE
         if (manual) {
@@ -205,6 +231,17 @@ class LinksActivity : PdfActivity() {
             val w = rect[2] * size[0]
             val h = rect[3] * size[1]
             if (w < 6f || h < 6f) return toast(getString(R.string.msg_area_too_small))
+            if (binding.kindText.isChecked) {
+                val body = binding.textInput.text?.toString().orEmpty().trim()
+                if (body.isEmpty()) return toast(getString(R.string.msg_enter_link_text))
+                val size = binding.sizeInput.text?.toString()?.toFloatOrNull() ?: 18f
+                val fonts = PdfEngine.LINK_FONTS
+                val font = fonts[binding.fontSpinner.selectedItemPosition.coerceIn(0, fonts.size - 1)]
+                runAndSave(Files.suggestName(sourceName, "_links")) { out ->
+                    PdfEngine.addTextLink(src, current + 1, x, y, size, body, font, chosenColour, url, out)
+                }
+                return
+            }
             val side = minOf(w, h)
             val icon = Files.newFile(this, "link_icon.png")
             java.io.FileOutputStream(icon).use {

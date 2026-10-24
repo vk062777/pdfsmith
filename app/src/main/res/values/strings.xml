@@ -251,8 +251,13 @@
     <string name="search_none">No matches</string>
     <string name="search_progress">Searching\u2026</string>
     <string name="search_count">%1$d / %2$d</string>
-    <string name="image_ocr_save_text">Save recognised text (.txt)</string>
     <string name="image_ocr_chars">%1$d image(s) \u2022 %2$d characters recognised</string>
-    <string name="image_ocr_saved_text">Recognised text saved</string>
-    <string name="image_ocr_run_first">Run the recognition first</string>
+    <string name="links_kind_icon">Link icon</string>
+    <string name="links_kind_text">Link text</string>
+    <string name="hint_link_text">Text to show on the page</string>
+    <string name="hint_link_size">Size</string>
+    <string name="msg_enter_link_text">Type the text you want on the page</string>
+    <string name="links_manual_text_hint">Choose a page, drag where the text should go, type the text and the address.</string>
+    <string name="image_ocr_copy">Copy recognised text</string>
+    <string name="image_ocr_copied">Text copied \u2014 paste it anywhere</string>
 </resources>

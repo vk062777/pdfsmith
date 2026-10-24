@@ -21,13 +21,24 @@ import kotlin.math.max
 
 /**
  * Reads the text in photos / screenshots on-device and saves them as a PDF that
- * can be searched and copied. The recognised text is also shown on screen.
+ * can be searched and copied.
  */
 class ImageOcrActivity : PdfActivity() {
 
     private lateinit var binding: ActivityImageOcrBinding
     private val uris = ArrayList<Uri>()
     private val names = ArrayList<String>()
+
+    /** The text recognised so far, so it can be copied anywhere. */
+    private var recognisedText = ""
+
+    private fun copyText() {
+        if (recognisedText.isBlank()) return toast(getString(R.string.image_ocr_none))
+        val cm = getSystemService(android.content.Context.CLIPBOARD_SERVICE)
+                as android.content.ClipboardManager
+        cm.setPrimaryClip(android.content.ClipData.newPlainText("NovaPDF OCR", recognisedText))
+        toast(getString(R.string.image_ocr_copied))
+    }
 
     private val recogniser: TextRecognizer by lazy {
         TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
@@ -41,28 +52,10 @@ class ImageOcrActivity : PdfActivity() {
         binding.toolbar.setNavigationOnClickListener { finish() }
         binding.btnChoose.setOnClickListener { pickImages() }
         binding.btnRun.setOnClickListener { run() }
-        binding.btnText.setOnClickListener { saveText() }
+        binding.btnCopy.setOnClickListener { copyText() }
         pickImages()
     }
 
-    private var recognised = ""
-
-    private val saveTextLauncher = registerForActivityResult(
-        androidx.activity.result.contract.ActivityResultContracts.CreateDocument("text/plain")
-    ) { uri ->
-        if (uri == null) return@registerForActivityResult
-        try {
-            contentResolver.openOutputStream(uri)?.use { it.write(recognised.toByteArray()) }
-            showSuccess(getString(R.string.image_ocr_saved_text), null, "text/plain")
-        } catch (t: Throwable) {
-            toast(getString(R.string.msg_failed, t.message ?: "could not save"))
-        }
-    }
-
-    private fun saveText() {
-        if (recognised.isBlank()) return toast(getString(R.string.image_ocr_run_first))
-        saveTextLauncher.launch("recognised-text.txt")
-    }
 
     override fun onImagesChosen(uris: List<Uri>) {
         this.uris.clear()
@@ -102,10 +95,10 @@ class ImageOcrActivity : PdfActivity() {
                 }
             }
             busy.dismiss()
-            recognised = text.toString()
-            val chars = recognised.count { !it.isWhitespace() }
+            recognisedText = text.toString()
+            val chars = recognisedText.count { !it.isWhitespace() }
             binding.info.text = getString(R.string.image_ocr_chars, pages.size, chars)
-            binding.btnText.isEnabled = recognised.isNotBlank()
+            binding.btnCopy.isEnabled = recognisedText.isNotBlank()
             if (pages.isEmpty()) {
                 toast(getString(R.string.image_ocr_none))
                 return@launch

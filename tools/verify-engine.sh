@@ -28,7 +28,7 @@ echo "== running engine verification =="
 java -cp "$CP" TestEngine
 
 echo "== rotation / overlay placement (rendered and pixel-checked) =="
-javac -cp "$CP" -d out TestRotate.java TestCrop.java TestEnc.java TestHostile.java TestTextLayer.java TestSearch.java TestLinkIcon.java
+javac -cp "$CP" -d out TestRotate.java TestCrop.java TestEnc.java TestHostile.java TestTextLayer.java TestSearch.java TestLinkIcon.java TestTextLink.java
 java -cp "$CP" TestRotate
 java -cp "$CP" TestCrop
 java -cp "$CP" TestEnc
@@ -52,5 +52,9 @@ python3 verify-search.py
 echo "== visible link icon + search speed =="
 java -cp "$CP" TestLinkIcon
 python3 verify-linkicon.py
+
+echo "== custom link text (rendered: visible, right colour, on the text) =="
+java -cp "$CP" TestTextLink
+python3 verify-textlink.py
 python3 -m pip install --quiet pymupdf >/dev/null 2>&1 || true
 python3 verify-render.py

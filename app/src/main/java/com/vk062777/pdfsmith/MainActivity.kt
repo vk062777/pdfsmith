@@ -102,7 +102,11 @@ class MainActivity : AppCompatActivity() {
             else -> Intent(this, ToolsActivity::class.java)
                 .putExtra(ToolsActivity.EXTRA_TOOL, action.name)
         }
-        startActivity(intent)
+        try {
+            startActivity(intent)
+        } catch (t: Throwable) {
+            android.widget.Toast.makeText(this, t.message ?: "Could not open", android.widget.Toast.LENGTH_LONG).show()
+        }
     }
 
     private fun buildRows(): List<HomeRow> = buildList {

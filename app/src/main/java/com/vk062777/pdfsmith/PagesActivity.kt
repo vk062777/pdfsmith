@@ -92,7 +92,8 @@ class PagesActivity : PdfActivity() {
                 if (count == null) return@loaded
                 items.clear()
                 for (i in 1..count) items.add(PageEntry(i))
-                adapter = PageThumbAdapter(items, renderer!!, lifecycleScope) { pos -> toggle(pos) }
+                val pr = renderer ?: return@loaded
+                adapter = PageThumbAdapter(items, pr, lifecycleScope) { pos -> toggle(pos) }
                 binding.recycler.adapter = adapter
                 updateInfo()
             }) {

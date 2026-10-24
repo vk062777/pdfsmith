@@ -1317,6 +1317,87 @@ public final class PdfEngine {
         }
     }
 
+    /** The standard PDF fonts offered for custom link text. */
+    public static final String[] LINK_FONTS = {
+            "Helvetica", "Helvetica Bold", "Times", "Times Bold", "Courier"
+    };
+
+    private static PDType1Font pickFont(String name) {
+        if (name == null) return PDType1Font.HELVETICA;
+        switch (name) {
+            case "Helvetica Bold": return PDType1Font.HELVETICA_BOLD;
+            case "Times":          return PDType1Font.TIMES_ROMAN;
+            case "Times Bold":     return PDType1Font.TIMES_BOLD;
+            case "Courier":        return PDType1Font.COURIER;
+            default:               return PDType1Font.HELVETICA;
+        }
+    }
+
+    /**
+     * Write VISIBLE custom text on a page in the chosen font, size and colour, and
+     * make that text a link. Tapping the text opens the address; tapping anywhere
+     * else does nothing.
+     */
+    public static void addTextLink(File src, int page1, float xd, float yd, float size,
+                                   String text, String fontName, int argb,
+                                   String url, File out) throws Exception {
+        String u = normaliseUrl(url);
+        if (u == null) throw new IllegalArgumentException("Not a valid link");
+        String safe = winAnsi(text);
+        if (safe == null || safe.trim().isEmpty()) {
+            throw new IllegalArgumentException("Enter the text to show");
+        }
+        float sz = Math.max(6f, Math.min(size, 144f));
+        try (PDDocument d = open(src)) {
+            if (page1 < 1 || page1 > d.getNumberOfPages()) {
+                throw new IllegalArgumentException("No such page");
+            }
+            PDPage page = d.getPage(page1 - 1);
+            PDRectangle crop = page.getCropBox();
+            float w = crop.getWidth(), h = crop.getHeight();
+            int r = ((page.getRotation() % 360) + 360) % 360;
+            float dw = (r == 90 || r == 270) ? h : w;
+            float dh = (r == 90 || r == 270) ? w : h;
+
+            PDType1Font font = pickFont(fontName);
+            float tw = font.getStringWidth(safe) / 1000f * sz;
+            float th = sz * 1.3f;
+            xd = Math.max(0f, Math.min(xd, Math.max(0f, dw - tw)));
+            yd = Math.max(0f, Math.min(yd, Math.max(0f, dh - th)));
+            float baseY = yd + sz * 0.82f;
+
+            float px, py;
+            switch (r) {
+                case 90:  px = baseY;      py = xd;         break;
+                case 180: px = w - xd;     py = baseY;      break;
+                case 270: px = w - baseY;  py = h - xd;     break;
+                default:  px = xd;         py = h - baseY;  break;
+            }
+            try (PDPageContentStream cs =
+                         new PDPageContentStream(d, page, AppendMode.APPEND, true, true)) {
+                cs.beginText();
+                cs.setFont(font, sz);
+                cs.setNonStrokingColor((argb >> 16) & 0xFF, (argb >> 8) & 0xFF, argb & 0xFF);
+                cs.setTextMatrix(Matrix.getRotateInstance(Math.toRadians(r), px, py));
+                cs.showText(safe);
+                cs.endText();
+            }
+
+            PDRectangle rect = displayBoxToPage(crop, r, xd, yd, tw, th);
+            com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationLink link =
+                    new com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationLink();
+            link.setRectangle(rect);
+            link.setBorderStyle(new com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDBorderStyleDictionary());
+            link.getBorderStyle().setWidth(0f);
+            com.tom_roush.pdfbox.pdmodel.interactive.action.PDActionURI action =
+                    new com.tom_roush.pdfbox.pdmodel.interactive.action.PDActionURI();
+            action.setURI(u);
+            link.setAction(action);
+            page.getAnnotations().add(link);
+            d.save(out);
+        }
+    }
+
     /** "example.com" -> "https://example.com"; mail addresses become mailto:. */
     public static String normaliseUrl(String raw) {
         if (raw == null) return null;

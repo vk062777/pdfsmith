@@ -70,7 +70,11 @@ object Files {
             putExtra(Intent.EXTRA_STREAM, uriFor(context, file))
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
-        context.startActivity(Intent.createChooser(i, null))
+        try {
+            context.startActivity(Intent.createChooser(i, null))
+        } catch (_: Exception) {
+            android.widget.Toast.makeText(context, "No app can share this file", android.widget.Toast.LENGTH_LONG).show()
+        }
     }
 
     fun openWith(context: Context, file: File, mime: String) {
