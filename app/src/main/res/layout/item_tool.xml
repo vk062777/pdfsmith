@@ -23,8 +23,8 @@
 
         <ImageView
             android:id="@+id/toolIcon"
-            android:layout_width="30dp"
-            android:layout_height="30dp"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
             android:contentDescription="@string/cd_tool_icon"
             android:src="@drawable/ic_file"
             app:tint="?attr/colorPrimary" />

@@ -12,9 +12,9 @@
         android:layout_height="?attr/actionBarSize"
         android:background="?attr/colorPrimary"
         app:navigationIcon="@drawable/ic_back"
-        app:navigationIconTint="@color/white"
+        app:navigationIconTint="?attr/colorOnPrimary"
         app:title="@string/tool_redact"
-        app:titleTextColor="@color/white" />
+        app:titleTextColor="?attr/colorOnPrimary" />
 
     <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
@@ -95,22 +95,13 @@
         android:orientation="horizontal">
 
         <ImageButton
-            android:id="@+id/btnZoom"
-            android:layout_width="46dp"
-            android:layout_height="46dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/redact_zoom"
-            android:src="@drawable/ic_zoom"
-            app:tint="@color/white" />
-
-        <ImageButton
             android:id="@+id/prevPage"
             android:layout_width="46dp"
             android:layout_height="46dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="@string/action_move_up"
             android:src="@drawable/ic_chevron_left"
-            app:tint="@color/white" />
+            app:tint="?attr/colorOnPrimary" />
 
         <TextView
             android:id="@+id/pageLabel"
@@ -128,7 +119,7 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="@string/action_move_down"
             android:src="@drawable/ic_chevron_right"
-            app:tint="@color/white" />
+            app:tint="?attr/colorOnPrimary" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnClear"

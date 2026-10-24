@@ -17,6 +17,14 @@
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:navigationBarColor">@color/surface</item>
         <item name="android:windowAnimationStyle">@style/Animation.PDFsmith</item>
+        <item name="textInputStyle">@style/Widget.KavoPDF.TextInput</item>
+        <!-- Material 3 Expressive: a larger, softer shape scale, and pill buttons -->
+        <item name="shapeCornerExtraSmall">6dp</item>
+        <item name="shapeCornerSmall">10dp</item>
+        <item name="shapeCornerMedium">16dp</item>
+        <item name="shapeCornerLarge">22dp</item>
+        <item name="shapeCornerExtraLarge">30dp</item>
+        <item name="materialButtonStyle">@style/Widget.KavoPDF.Button</item>
         <item name="alertDialogTheme">@style/ThemeOverlay.KavoPDF.Dialog</item>
         <item name="materialAlertDialogTheme">@style/ThemeOverlay.KavoPDF.Dialog</item>
     </style>
@@ -70,5 +78,43 @@
         <item name="shapeAppearanceOverlay">@style/ShapeAppearance.KavoPDF.Dialog</item>
         <item name="android:windowBackground">@drawable/bg_dialog_rounded</item>
         <item name="android:backgroundDimAmount">0.55</item>
+    </style>
+    <!-- For screens that open a picker straight away: nothing to animate, so the
+         screen and the picker never animate over each other. -->
+    <style name="Animation.KavoPDF.None" parent="@android:style/Animation.Activity">
+        <item name="android:activityOpenEnterAnimation">@anim/instant</item>
+        <item name="android:activityOpenExitAnimation">@anim/instant</item>
+        <item name="android:activityCloseEnterAnimation">@anim/instant</item>
+        <item name="android:activityCloseExitAnimation">@anim/instant</item>
+    </style>
+    <!-- Input fields are pills everywhere. Set as the theme's textInputStyle so a
+         field can never come out as a bare underline by accident. -->
+    <style name="Widget.KavoPDF.TextInput" parent="Widget.Material3.TextInputLayout.FilledBox">
+        <item name="boxBackgroundColor">@color/field_bg</item>
+        <item name="boxCornerRadiusTopStart">26dp</item>
+        <item name="boxCornerRadiusTopEnd">26dp</item>
+        <item name="boxCornerRadiusBottomStart">26dp</item>
+        <item name="boxCornerRadiusBottomEnd">26dp</item>
+        <item name="boxStrokeWidth">0dp</item>
+        <item name="boxStrokeWidthFocused">0dp</item>
+        <item name="hintTextColor">?attr/colorPrimary</item>
+    </style>
+    <!-- Matches the launcher mark: the amber of the K on a near-black ground. -->
+    <style name="Theme.PDFsmith.Amber">
+        <item name="colorPrimary">#FFF5A524</item>
+        <item name="colorOnPrimary">#FF241A00</item>
+        <item name="colorPrimaryContainer">#FFFFE7C2</item>
+        <item name="colorOnPrimaryContainer">#FF3D2A00</item>
+        <item name="colorSecondary">#FFB26A00</item>
+        <item name="colorSecondaryContainer">#FFFFDFAE</item>
+        <item name="android:statusBarColor">#FF241A00</item>
+    </style>
+    <style name="ShapeAppearance.KavoPDF.Pill" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">50%</item>
+    </style>
+
+    <style name="Widget.KavoPDF.Button" parent="Widget.Material3.Button">
+        <item name="shapeAppearance">@style/ShapeAppearance.KavoPDF.Pill</item>
     </style>
 </resources>

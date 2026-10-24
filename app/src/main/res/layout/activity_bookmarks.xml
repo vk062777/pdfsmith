@@ -13,7 +13,7 @@
         android:background="?attr/colorPrimary"
         app:navigationIcon="@drawable/ic_back"
         app:title="@string/tool_bookmarks"
-        app:titleTextColor="@color/white" />
+        app:titleTextColor="?attr/colorOnPrimary" />
 
     <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"

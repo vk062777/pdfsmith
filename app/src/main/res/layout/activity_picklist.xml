@@ -12,8 +12,8 @@
         android:layout_height="?attr/actionBarSize"
         android:background="?attr/colorPrimary"
         app:navigationIcon="@drawable/ic_back"
-        app:navigationIconTint="@color/white"
-        app:titleTextColor="@color/white" />
+        app:navigationIconTint="?attr/colorOnPrimary"
+        app:titleTextColor="?attr/colorOnPrimary" />
 
     <TextView
         android:id="@+id/hint"

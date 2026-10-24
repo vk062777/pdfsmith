@@ -13,9 +13,9 @@
         android:layout_height="?attr/actionBarSize"
         android:background="?attr/colorPrimary"
         app:navigationIcon="@drawable/ic_back"
-        app:navigationIconTint="@color/white"
+        app:navigationIconTint="?attr/colorOnPrimary"
         app:title="@string/tool_annotate"
-        app:titleTextColor="@color/white" />
+        app:titleTextColor="?attr/colorOnPrimary" />
 
     <FrameLayout
         android:layout_width="match_parent"
@@ -62,53 +62,53 @@
 
                 <ImageButton
                     android:id="@+id/swatchBlack"
-                    android:layout_width="34dp"
-                    android:layout_height="34dp"
-                    android:layout_marginEnd="6dp"
+                    android:layout_width="30dp"
+                    android:layout_height="30dp"
+                    android:layout_marginEnd="5dp"
                     android:background="@drawable/bg_swatch"
                     android:backgroundTint="@color/swatch_black"
                     android:contentDescription="@string/label_colour" />
 
                 <ImageButton
                     android:id="@+id/swatchRed"
-                    android:layout_width="34dp"
-                    android:layout_height="34dp"
-                    android:layout_marginEnd="6dp"
+                    android:layout_width="30dp"
+                    android:layout_height="30dp"
+                    android:layout_marginEnd="5dp"
                     android:background="@drawable/bg_swatch"
                     android:backgroundTint="@color/swatch_red"
                     android:contentDescription="@string/label_colour" />
 
                 <ImageButton
                     android:id="@+id/swatchBlue"
-                    android:layout_width="34dp"
-                    android:layout_height="34dp"
-                    android:layout_marginEnd="6dp"
+                    android:layout_width="30dp"
+                    android:layout_height="30dp"
+                    android:layout_marginEnd="5dp"
                     android:background="@drawable/bg_swatch"
                     android:backgroundTint="@color/swatch_blue"
                     android:contentDescription="@string/label_colour" />
 
                 <ImageButton
                     android:id="@+id/swatchGreen"
-                    android:layout_width="34dp"
-                    android:layout_height="34dp"
-                    android:layout_marginEnd="6dp"
+                    android:layout_width="30dp"
+                    android:layout_height="30dp"
+                    android:layout_marginEnd="5dp"
                     android:background="@drawable/bg_swatch"
                     android:backgroundTint="@color/swatch_green"
                     android:contentDescription="@string/label_colour" />
 
                 <ImageButton
                     android:id="@+id/swatchOrange"
-                    android:layout_width="34dp"
-                    android:layout_height="34dp"
-                    android:layout_marginEnd="6dp"
+                    android:layout_width="30dp"
+                    android:layout_height="30dp"
+                    android:layout_marginEnd="5dp"
                     android:background="@drawable/bg_swatch"
                     android:backgroundTint="@color/swatch_orange"
                     android:contentDescription="@string/label_colour" />
 
                 <ImageButton
                     android:id="@+id/swatchPurple"
-                    android:layout_width="34dp"
-                    android:layout_height="34dp"
+                    android:layout_width="30dp"
+                    android:layout_height="30dp"
                     android:layout_marginEnd="14dp"
                     android:background="@drawable/bg_swatch"
                     android:backgroundTint="@color/swatch_purple"
@@ -132,7 +132,7 @@
 
                 <com.google.android.material.slider.Slider
                     android:id="@+id/sizeSlider"
-                    android:layout_width="150dp"
+                    android:layout_width="112dp"
                     android:layout_height="wrap_content"
                     android:stepSize="1"
                     android:value="3"

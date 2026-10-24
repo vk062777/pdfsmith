@@ -18,7 +18,7 @@
         android:contentDescription="@string/msg_done"
         android:padding="16dp"
         android:src="@drawable/ic_check"
-        app:tint="@color/white" />
+        app:tint="?attr/colorOnPrimary" />
 
     <TextView
         android:id="@+id/successTitle"

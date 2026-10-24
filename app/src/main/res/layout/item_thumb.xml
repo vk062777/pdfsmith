@@ -54,7 +54,7 @@
             android:padding="3dp"
             android:src="@drawable/ic_check"
             android:visibility="gone"
-            app:tint="@color/white" />
+            app:tint="?attr/colorOnPrimary" />
     </FrameLayout>
 
 </com.google.android.material.card.MaterialCardView>
