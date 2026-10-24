@@ -113,7 +113,7 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnExtract"
-            style="@style/Widget.Material3.Button.OutlinedButton"
+            style="@style/Widget.KavoPDF.Button.Outlined"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginEnd="6dp"

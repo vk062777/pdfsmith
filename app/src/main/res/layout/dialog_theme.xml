@@ -100,6 +100,14 @@
             android:background="@drawable/bg_swatch"
             android:backgroundTint="@color/accent_crimson"
             android:contentDescription="@string/label_colour" />
+
+        <ImageButton
+            android:id="@+id/accentAmber"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@drawable/bg_swatch"
+            android:backgroundTint="@color/accent_amber"
+            android:contentDescription="@string/label_colour" />
     </LinearLayout>
 
 </LinearLayout>
