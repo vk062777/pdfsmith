@@ -55,56 +55,59 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="10dp"
+        android:gravity="center_vertical"
         android:orientation="horizontal">
 
         <ImageButton
             android:id="@+id/accentIndigo"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:layout_marginEnd="10dp"
+            android:layout_width="34dp"
+            android:layout_height="34dp"
+            android:layout_marginEnd="7dp"
             android:background="@drawable/bg_swatch"
             android:backgroundTint="@color/accent_indigo"
             android:contentDescription="@string/label_colour" />
 
         <ImageButton
             android:id="@+id/accentTeal"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:layout_marginEnd="10dp"
+            android:layout_width="34dp"
+            android:layout_height="34dp"
+            android:layout_marginEnd="7dp"
             android:background="@drawable/bg_swatch"
             android:backgroundTint="@color/accent_teal"
             android:contentDescription="@string/label_colour" />
 
         <ImageButton
             android:id="@+id/accentViolet"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:layout_marginEnd="10dp"
+            android:layout_width="34dp"
+            android:layout_height="34dp"
+            android:layout_marginEnd="7dp"
             android:background="@drawable/bg_swatch"
             android:backgroundTint="@color/accent_violet"
             android:contentDescription="@string/label_colour" />
 
         <ImageButton
             android:id="@+id/accentGreen"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:layout_marginEnd="10dp"
+            android:layout_width="34dp"
+            android:layout_height="34dp"
+            android:layout_marginEnd="7dp"
             android:background="@drawable/bg_swatch"
             android:backgroundTint="@color/accent_green"
             android:contentDescription="@string/label_colour" />
 
         <ImageButton
             android:id="@+id/accentCrimson"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="34dp"
+            android:layout_height="34dp"
+            android:layout_marginEnd="7dp"
             android:background="@drawable/bg_swatch"
             android:backgroundTint="@color/accent_crimson"
             android:contentDescription="@string/label_colour" />
 
         <ImageButton
             android:id="@+id/accentAmber"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="34dp"
+            android:layout_height="34dp"
+            android:layout_marginEnd="7dp"
             android:background="@drawable/bg_swatch"
             android:backgroundTint="@color/accent_amber"
             android:contentDescription="@string/label_colour" />
