@@ -16,7 +16,7 @@ import com.vk062777.pdfsmith.ui.PageRenderer
 import com.vk062777.pdfsmith.util.Files
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.suspendCoroutine
+import kotlin.coroutines.suspendCoroutine
 import kotlinx.coroutines.withContext
 import java.io.File
 import kotlin.coroutines.resume
