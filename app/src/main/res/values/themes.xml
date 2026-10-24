@@ -19,12 +19,12 @@
         <item name="android:windowAnimationStyle">@style/Animation.PDFsmith</item>
         <item name="textInputStyle">@style/Widget.KavoPDF.TextInput</item>
         <!-- Material 3 Expressive: a larger, softer shape scale, and pill buttons -->
-        <item name="shapeAppearanceCornerExtraSmall">6dp</item>
-        <item name="shapeAppearanceCornerSmall">10dp</item>
-        <item name="shapeAppearanceCornerMedium">16dp</item>
-        <item name="shapeAppearanceCornerLarge">22dp</item>
-        <item name="shapeAppearanceCornerExtraLarge">30dp</item>
         <item name="materialButtonStyle">@style/Widget.KavoPDF.Button</item>
+        <item name="shapeAppearanceCornerExtraSmall">@style/ShapeAppearance.KavoPDF.CornerExtraSmall</item>
+        <item name="shapeAppearanceCornerSmall">@style/ShapeAppearance.KavoPDF.CornerSmall</item>
+        <item name="shapeAppearanceCornerMedium">@style/ShapeAppearance.KavoPDF.CornerMedium</item>
+        <item name="shapeAppearanceCornerLarge">@style/ShapeAppearance.KavoPDF.CornerLarge</item>
+        <item name="shapeAppearanceCornerExtraLarge">@style/ShapeAppearance.KavoPDF.CornerExtraLarge</item>
         <item name="alertDialogTheme">@style/ThemeOverlay.KavoPDF.Dialog</item>
         <item name="materialAlertDialogTheme">@style/ThemeOverlay.KavoPDF.Dialog</item>
     </style>
@@ -116,5 +116,21 @@
 
     <style name="Widget.KavoPDF.Button" parent="Widget.Material3.Button">
         <item name="shapeAppearance">@style/ShapeAppearance.KavoPDF.Pill</item>
+    </style>
+    <!-- Material 3 Expressive shape scale: each step is a ShapeAppearance style. -->
+    <style name="ShapeAppearance.KavoPDF.CornerExtraSmall" parent="">
+        <item name="cornerFamily">rounded</item><item name="cornerSize">8dp</item>
+    </style>
+    <style name="ShapeAppearance.KavoPDF.CornerSmall" parent="">
+        <item name="cornerFamily">rounded</item><item name="cornerSize">12dp</item>
+    </style>
+    <style name="ShapeAppearance.KavoPDF.CornerMedium" parent="">
+        <item name="cornerFamily">rounded</item><item name="cornerSize">16dp</item>
+    </style>
+    <style name="ShapeAppearance.KavoPDF.CornerLarge" parent="">
+        <item name="cornerFamily">rounded</item><item name="cornerSize">24dp</item>
+    </style>
+    <style name="ShapeAppearance.KavoPDF.CornerExtraLarge" parent="">
+        <item name="cornerFamily">rounded</item><item name="cornerSize">32dp</item>
     </style>
 </resources>
