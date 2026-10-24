@@ -560,3 +560,16 @@ really reaches the PDF, plus everything from before.
 The camera screens need the CAMERA permission, which is requested at runtime and is
 the only real permission the app asks for. The CI guard still fails the build if
 anything else (INTERNET included) creeps in.
+## What's new in 2.2.1
+
+- **Every tool now shows its own name in the heading.** ToolsActivity calls
+  setSupportActionBar, so the ActionBar owns the title and setting it on the raw
+  toolbar was being overwritten by the activity label - and ToolsActivity has no
+  label, so it fell back to the app name. The ten tools it hosts (extract images,
+  compress, watermark, protect, unlock, sign, verify, metadata, page numbers,
+  split) were all affected. The reader screen's label is fixed too.
+- **The theme swatches are evenly spaced.** The crimson and amber swatches were
+  added without the margin the others had, so they sat stuck together while the
+  rest were spaced - and all six were slightly too big for the dialog. They are
+  now the same size with the same gap.
+- A CI guard now fails the build if a tool would ever open with no heading.

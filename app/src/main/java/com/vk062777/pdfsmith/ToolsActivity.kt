@@ -107,7 +107,10 @@ class ToolsActivity : PdfActivity() {
             Action.SPLIT -> R.string.tool_split to R.string.tool_split_desc
             else -> R.string.app_name to R.string.app_tagline
         }
-        binding.toolbar.setTitle(title)
+        // The toolbar is the support ActionBar here, and the ActionBar owns the
+        // title - setting it on the raw Toolbar is simply overwritten by the
+        // activity label, which is why these screens showed the app name.
+        supportActionBar?.setTitle(title)
         binding.toolDesc.setText(desc)
     }
 
