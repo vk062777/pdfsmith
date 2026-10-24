@@ -22,7 +22,7 @@ javac -d out $(find stubs -name '*.java')
 CP="out:libs/aar/classes.jar:libs/aar/assets:libs/bcprov.jar:libs/bcpkix.jar:libs/bcutil.jar"
 
 echo "== compiling the real engine + tests =="
-javac -cp "$CP" -d out $(find ../../app/src/main/java -name '*.java') TestEngine.java
+javac -cp "$CP" -d out $(find ../../app/src/main/java -name '*.java') TestEngine.java TestEncrypt.java TestBookmarks.java
 
 echo "== running engine verification =="
 java -cp "$CP" TestEngine
@@ -75,3 +75,13 @@ java -cp "$CP" TestRedact
 python3 verify-redact.py
 python3 -m pip install --quiet pymupdf >/dev/null 2>&1 || true
 python3 verify-render.py
+
+echo
+echo "== PDF protection: real AES-256, and it actually enforces =="
+java -cp "$CP" TestEncrypt
+python3 verify-encrypt.py
+
+echo
+echo "== bookmarks: a real PDF outline, read back independently =="
+java -cp "$CP" TestBookmarks
+python3 verify-bookmarks.py
