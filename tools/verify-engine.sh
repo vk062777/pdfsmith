@@ -22,7 +22,7 @@ javac -d out $(find stubs -name '*.java')
 CP="out:libs/aar/classes.jar:libs/aar/assets:libs/bcprov.jar:libs/bcpkix.jar:libs/bcutil.jar"
 
 echo "== compiling the real engine + tests =="
-javac -cp "$CP" -d out $(find ../../app/src/main/java -name '*.java') TestEngine.java TestEncrypt.java TestBookmarks.java
+javac -cp "$CP" -d out $(find ../../app/src/main/java -name '*.java') TestEngine.java TestEncrypt.java TestBookmarks.java TestReport.java TestFonts.java
 
 echo "== running engine verification =="
 java -cp "$CP" TestEngine
@@ -85,3 +85,12 @@ echo
 echo "== bookmarks: a real PDF outline, read back independently =="
 java -cp "$CP" TestBookmarks
 python3 verify-bookmarks.py
+echo
+echo "== designed activity-log report (header, facts, table, colour) =="
+java -cp "$CP" TestReport
+python3 verify-report.py
+
+echo
+echo "== fonts really change the output (watermark + custom link text) =="
+java -cp "$CP" TestFonts
+python3 verify-fonts.py
