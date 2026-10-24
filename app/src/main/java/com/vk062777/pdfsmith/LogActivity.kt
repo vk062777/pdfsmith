@@ -101,7 +101,7 @@ class LogActivity : PdfActivity() {
     private fun accentColour(): Int {
         val tv = android.util.TypedValue()
         val resolved = theme.resolveAttribute(
-            com.google.android.material.R.attr.colorPrimary, tv, true
+            androidx.appcompat.R.attr.colorPrimary, tv, true
         )
         return if (resolved && tv.data != 0) tv.data else 0xFF3B5BDB.toInt()
     }
