@@ -16,6 +16,9 @@ sealed class HomeRow {
 
 class ToolAdapter(
     val rows: List<HomeRow>,
+    /** True while the list is moving. We never animate mid-scroll, or cards pop
+     *  in at odd moments and the scroll looks like it is stuttering. */
+    private val isScrolling: () -> Boolean = { false },
     private val onClick: (Action) -> Unit
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
