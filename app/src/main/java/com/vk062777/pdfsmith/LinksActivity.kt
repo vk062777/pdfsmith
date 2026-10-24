@@ -58,8 +58,9 @@ class LinksActivity : PdfActivity() {
         binding.kindGroup.addOnButtonCheckedListener { _, _, checked ->
             if (checked) applyKind()
         }
+        binding.fontSpinner.popupBackground = getDrawable(R.drawable.bg_popup_pill)
         binding.fontSpinner.adapter = android.widget.ArrayAdapter(
-            this, android.R.layout.simple_spinner_dropdown_item, PdfEngine.LINK_FONTS
+            this, R.layout.item_dropdown, PdfEngine.LINK_FONTS
         )
         buildColourRow()
         pickAfterEnter { pickPdf() }
@@ -167,7 +168,6 @@ class LinksActivity : PdfActivity() {
         sourceName = Files.displayName(this, uri)
         openPdf(uri) { f ->
             binding.fileName.text = sourceName
-            binding.toolbar.title = Files.baseName(sourceName)
             runTask(getString(R.string.msg_processing), onDone = opened@{ res ->
                 if (res == null) return@opened
                 pageCount = res.first

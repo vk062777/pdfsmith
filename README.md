@@ -584,3 +584,17 @@ anything else (INTERNET included) creeps in.
   and forms. Passwords keep the reveal eye.
 - **The page-count line under the OCR screen is gone**, and so is the
   "Choose a folder, then Run." line on the extract-images screen.
+## What's new in 2.2.3
+
+- **Dropdowns are pills too.** Every spinner - the compression level, the font and
+  colour pickers, the page size and orientation pickers - is now a rounded field,
+  and the list that drops out of it is rounded with properly padded rows instead of
+  a square box.
+- **Tool screens show the tool's name, not the document's.** Redact, Annotate,
+  Crop, Links and Pages were replacing the heading with the file name; they now
+  show the tool name, like every other screen. (The reader still shows the document
+  name, which is the useful heading there.)
+- **No leftover numbers in the watermark fields.** Font size and opacity were
+  pre-filled with "0" and "0.25" - they are empty now, and the same sensible
+  defaults still apply when you leave them blank. The page-number fields got the
+  same treatment.

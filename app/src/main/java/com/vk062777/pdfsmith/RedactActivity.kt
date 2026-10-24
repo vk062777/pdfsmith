@@ -64,7 +64,6 @@ class RedactActivity : PdfActivity() {
         sourceName = Files.displayName(this, uri)
         openPdf(uri) { f ->
             binding.fileName.text = sourceName
-            binding.toolbar.title = Files.baseName(sourceName)
             runTask(getString(R.string.msg_processing), onDone = opened@{ res ->
                 if (res == null) return@opened
                 pageCount = res

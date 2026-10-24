@@ -56,8 +56,10 @@ class CreatePdfActivity : PdfActivity() {
         binding.overlay.onStampAt = { fx, fy -> startImage(fx, fy) }
         binding.overlay.onSelectionChanged = { updateOptions() }
 
-        binding.sizeSpinner.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, sizeNames)
-        binding.orientSpinner.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, orientNames)
+        binding.sizeSpinner.popupBackground = getDrawable(R.drawable.bg_popup_pill)
+        binding.sizeSpinner.adapter = ArrayAdapter(this, R.layout.item_dropdown, sizeNames)
+        binding.orientSpinner.popupBackground = getDrawable(R.drawable.bg_popup_pill)
+        binding.orientSpinner.adapter = ArrayAdapter(this, R.layout.item_dropdown, orientNames)
         binding.sizeSpinner.setOnItemSelectedListener(onItem { applyPageSize() })
         binding.orientSpinner.setOnItemSelectedListener(onItem { applyPageSize() })
 

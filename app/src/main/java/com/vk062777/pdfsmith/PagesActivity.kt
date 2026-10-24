@@ -87,7 +87,6 @@ class PagesActivity : PdfActivity() {
     override fun onPdfChosen(uri: Uri) {
         sourceName = Files.displayName(this, uri)
         openPdf(uri) { f ->
-            binding.toolbar.title = Files.baseName(sourceName)
             runTask(getString(R.string.msg_processing), onDone = loaded@{ count ->
                 if (count == null) return@loaded
                 items.clear()

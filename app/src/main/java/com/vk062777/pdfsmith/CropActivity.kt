@@ -49,7 +49,6 @@ class CropActivity : PdfActivity() {
     override fun onPdfChosen(uri: Uri) {
         sourceName = Files.displayName(this, uri)
         openPdf(uri) { f ->
-            binding.toolbar.title = Files.baseName(sourceName)
             runTask(getString(R.string.msg_processing), onDone = opened@{ count ->
                 if (count == null || count == 0) return@opened
                 pageCount = count

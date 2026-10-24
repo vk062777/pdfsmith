@@ -232,7 +232,9 @@ class ToolsActivity : PdfActivity() {
             setTextColor(getColor(R.color.text_secondary))
         })
         val sp = Spinner(this)
-        sp.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, options)
+        sp.background = getDrawable(R.drawable.bg_spinner_pill)
+        sp.popupBackground = getDrawable(R.drawable.bg_popup_pill)
+        sp.adapter = ArrayAdapter(this, R.layout.item_dropdown, options)
         sp.setSelection(selected)
         box.addView(sp)
         binding.params.addView(box)
@@ -267,10 +269,10 @@ class ToolsActivity : PdfActivity() {
                 fFontSpinner = addSpinner(getString(R.string.label_font), FONT_NAMES, 1)
                 fColourSpinner = addSpinner(getString(R.string.label_colour), COLOUR_NAMES, 1)
                 fRandom = addSwitch(getString(R.string.position_random), false)
-                fFont = addField(getString(R.string.hint_font_size), InputType.TYPE_CLASS_NUMBER, "0")
+                fFont = addField(getString(R.string.hint_font_size), InputType.TYPE_CLASS_NUMBER)
                 fOpacity = addField(
                     getString(R.string.hint_opacity),
-                    InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL, "0.25"
+                    InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
                 )
             }
             Action.COMPRESS -> {
@@ -306,7 +308,7 @@ class ToolsActivity : PdfActivity() {
             }
             Action.PAGENUM -> {
                 fFormat = addField(getString(R.string.hint_page_format), InputType.TYPE_CLASS_TEXT, "Page {n} of {total}")
-                fFont = addField(getString(R.string.hint_font_size), InputType.TYPE_CLASS_NUMBER, "10")
+                fFont = addField(getString(R.string.hint_font_size), InputType.TYPE_CLASS_NUMBER)
                 fPagenumOpacity = addField(
                     getString(R.string.hint_opacity),
                     InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL, "1.0"
