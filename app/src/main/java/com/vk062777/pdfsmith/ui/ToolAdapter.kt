@@ -45,8 +45,8 @@ class ToolAdapter(
                 toolTitle.setText(row.item.title)
                 toolDesc.setText(row.item.desc)
                 root.setOnClickListener { onClick(row.item.action) }
-                // light stagger-in the first time each card appears
-                if (animated.add(position)) {
+                // light stagger-in, but only on a still screen
+                if (!isScrolling() && animated.add(position)) {
                     root.alpha = 0f
                     root.translationY = 24f
                     root.animate()

@@ -57,7 +57,7 @@ class RedactActivity : PdfActivity() {
             marks.remove(current)
         }
         binding.btnRun.setOnClickListener { run() }
-        pickPdf()
+        pickAfterEnter { pickPdf() }
     }
 
     /**

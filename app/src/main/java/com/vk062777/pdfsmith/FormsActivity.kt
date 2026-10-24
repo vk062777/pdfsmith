@@ -34,7 +34,7 @@ class FormsActivity : PdfActivity() {
         setSupportActionBar(binding.toolbar)
         binding.toolbar.setNavigationOnClickListener { finish() }
         binding.btnSave.setOnClickListener { save() }
-        pickPdf()
+        pickAfterEnter { pickPdf() }
     }
 
     override fun onPdfChosen(uri: Uri) {

@@ -216,6 +216,17 @@ abstract class PdfActivity : AppCompatActivity() {
 
     protected fun toast(msg: String) = Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
 
+    /**
+     * Open a picker only once this screen has finished sliding in. Launching it
+     * while the activity is still animating makes the two transitions fight, and
+     * the whole thing visibly stutters.
+     */
+    protected fun pickAfterEnter(block: () -> Unit) {
+        window.decorView.postDelayed({
+            if (!isFinishing && !isDestroyed) block()
+        }, 260L)
+    }
+
     private fun takePersist(uri: Uri) {
         try {
             contentResolver.takePersistableUriPermission(

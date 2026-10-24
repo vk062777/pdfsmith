@@ -25,7 +25,9 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         val rows = buildRows()
-        val adapter = ToolAdapter(rows) { dispatch(it) }
+        val adapter = ToolAdapter(rows, {
+            binding.recycler.scrollState != androidx.recyclerview.widget.RecyclerView.SCROLL_STATE_IDLE
+        }) { dispatch(it) }
         val lm = GridLayoutManager(this, 2)
         lm.spanSizeLookup = object : GridLayoutManager.SpanSizeLookup() {
             override fun getSpanSize(position: Int) =

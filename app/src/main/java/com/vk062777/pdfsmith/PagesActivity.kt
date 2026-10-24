@@ -48,7 +48,7 @@ class PagesActivity : PdfActivity() {
         binding.btnExtract.setOnClickListener { extract() }
 
         attachDragToReorder()
-        pickPdf()
+        pickAfterEnter { pickPdf() }
     }
 
     private fun attachDragToReorder() {

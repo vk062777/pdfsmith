@@ -33,7 +33,7 @@ class MergeActivity : PdfActivity() {
         binding.addButton.setOnClickListener { pickPdfs() }
         binding.actionButton.setOnClickListener { doMerge() }
 
-        pickPdfs()
+        pickAfterEnter { pickPdfs() }
     }
 
     override fun onPdfsChosen(uris: List<Uri>) {

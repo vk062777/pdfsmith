@@ -101,7 +101,7 @@ class AnnotateActivity : PdfActivity() {
 
         selectColour(Color.BLACK, binding.swatchBlack)
         selectTool(OverlayView.Tool.PEN, binding.toolPen)
-        pickPdf()
+        pickAfterEnter { pickPdf() }
     }
 
     // ---- tools & options ---------------------------------------------------

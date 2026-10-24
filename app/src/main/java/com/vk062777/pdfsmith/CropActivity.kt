@@ -43,7 +43,7 @@ class CropActivity : PdfActivity() {
         }
         binding.btnSave.setOnClickListener { save() }
 
-        pickPdf()
+        pickAfterEnter { pickPdf() }
     }
 
     override fun onPdfChosen(uri: Uri) {

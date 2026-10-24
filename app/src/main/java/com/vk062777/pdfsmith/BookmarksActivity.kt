@@ -44,7 +44,7 @@ class BookmarksActivity : PdfActivity() {
         binding.btnAdd.setOnClickListener { addRow("", rows.size + 1) }
         binding.btnSave.setOnClickListener { save() }
         render()
-        pickPdf()
+        pickAfterEnter { pickPdf() }
     }
 
     override fun onDestroy() {

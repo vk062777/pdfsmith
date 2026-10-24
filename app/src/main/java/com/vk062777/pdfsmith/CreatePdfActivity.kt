@@ -221,7 +221,7 @@ class CreatePdfActivity : PdfActivity() {
 
     private fun startImage(fx: Float, fy: Float) {
         pendingPoint = fx to fy
-        pickImages()
+        pickAfterEnter { pickImages() }
     }
 
     override fun onImagesChosen(uris: List<Uri>) {

@@ -486,3 +486,16 @@ over the old one.
 
 Verified on every build: AES-256 parameters and enforcement, the outline read back by
 an independent library, the log export, plus everything from before.
+
+## What's new in 2.0.1 - icon and animation fixes
+
+- **The launcher icon is now exactly the mark that was chosen.** The first build
+  drew a different K (thinner spine, different arms); every launcher asset is now
+  generated from the same geometry - adaptive foreground, legacy square, legacy
+  round, and the monochrome layer for themed icons.
+- **No more stutter while scrolling the home list.** Cards were running their
+  fade-and-slide entry animation again every time they were bound, so newly
+  revealed cards popped in mid-scroll. They now animate only on a still screen.
+- **No more stutter when the file picker opens.** A tool screen opened the picker
+  immediately, while its own slide-in animation was still running, and the two
+  transitions fought. The picker now opens once the screen has settled.

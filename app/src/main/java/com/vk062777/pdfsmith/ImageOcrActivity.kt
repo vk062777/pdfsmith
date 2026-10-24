@@ -53,7 +53,7 @@ class ImageOcrActivity : PdfActivity() {
         binding.btnChoose.setOnClickListener { pickImages() }
         binding.btnRun.setOnClickListener { run() }
         binding.btnCopy.setOnClickListener { copyText() }
-        pickImages()
+        pickAfterEnter { pickImages() }
     }
 
 

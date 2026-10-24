@@ -50,7 +50,7 @@ class OcrActivity : PdfActivity() {
         binding.toolbar.setNavigationOnClickListener { finish() }
         binding.btnChoose.setOnClickListener { pickPdf() }
         binding.btnRun.setOnClickListener { run() }
-        pickPdf()
+        pickAfterEnter { pickPdf() }
     }
 
     override fun onPdfChosen(uri: Uri) {

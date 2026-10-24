@@ -92,7 +92,7 @@ class ToolsActivity : PdfActivity() {
         applyToolChrome()
         binding.btnChoose.setOnClickListener { pickPdf() }
         binding.btnRun.setOnClickListener { onRun() }
-        pickPdf()
+        pickAfterEnter { pickPdf() }
     }
 
     private fun applyToolChrome() {

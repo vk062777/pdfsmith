@@ -62,7 +62,7 @@ class LinksActivity : PdfActivity() {
             this, android.R.layout.simple_spinner_dropdown_item, PdfEngine.LINK_FONTS
         )
         buildColourRow()
-        pickPdf()
+        pickAfterEnter { pickPdf() }
     }
 
     /** Full-screen placement: hide the controls so the page fills the screen. */

@@ -33,7 +33,7 @@ class ImagesToPdfActivity : PdfActivity() {
         binding.addButton.setOnClickListener { pickImages() }
         binding.actionButton.setOnClickListener { create() }
 
-        pickImages()
+        pickAfterEnter { pickImages() }
     }
 
     override fun onImagesChosen(uris: List<Uri>) {
