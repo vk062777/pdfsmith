@@ -37,12 +37,22 @@
             android:id="@+id/sizeSpinner"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:background="@drawable/bg_spinner_pill"
+            android:popupBackground="@drawable/bg_popup_pill"
+            android:paddingStart="18dp"
+            android:paddingEnd="40dp"
+            android:minHeight="52dp"
             android:layout_marginStart="6dp" />
 
         <Spinner
             android:id="@+id/orientSpinner"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:background="@drawable/bg_spinner_pill"
+            android:popupBackground="@drawable/bg_popup_pill"
+            android:paddingStart="18dp"
+            android:paddingEnd="40dp"
+            android:minHeight="52dp"
             android:layout_marginStart="10dp" />
     </LinearLayout>
 

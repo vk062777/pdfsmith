@@ -236,6 +236,11 @@
             android:id="@+id/fontSpinner"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:background="@drawable/bg_spinner_pill"
+            android:popupBackground="@drawable/bg_popup_pill"
+            android:paddingStart="18dp"
+            android:paddingEnd="40dp"
+            android:minHeight="52dp"
             android:layout_weight="1" />
 
         <com.google.android.material.textfield.TextInputLayout
