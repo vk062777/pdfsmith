@@ -17,7 +17,7 @@ def ink_maps(path):
     out = {}
     for i in range(len(d)):
         px = d[i].get_pixmap(dpi=DPI, colorspace=pymupdf.csGRAY)
-        out[i + 1] = (np.frombuffer(px.samples, dtype=np.uint8).reshape(px.height, px.width),
+        out[i + 1] = (np.frombuffer(px.samples, dtype=np.uint8).reshape(px.height, px.width) < 140,
                       px.width, px.height)
     return d, out
 
