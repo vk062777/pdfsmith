@@ -9,6 +9,9 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.inputmethod.EditorInfo
 import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.viewpager2.widget.ViewPager2
 import com.vk062777.pdfsmith.databinding.ActivityViewerBinding
 import com.vk062777.pdfsmith.engine.PdfEngine
@@ -27,6 +30,7 @@ class ViewerActivity : PdfActivity() {
     private var adapter: ViewerAdapter? = null
     private var viewRotation = 0
     private val sizes = mutableListOf<FloatArray>()
+    private var textIndex: PdfEngine.TextIndex? = null
     private var matches: List<PdfEngine.Match> = emptyList()
     private var matchIndex = -1
 
@@ -58,6 +62,7 @@ class ViewerActivity : PdfActivity() {
             pfd = descriptor
             val pr = PageRenderer(PdfRenderer(descriptor))
             renderer = pr
+            textIndex = null
             sizes.clear()
             sizes.addAll(runCatching { PdfEngine.pageDisplaySizes(file) }.getOrDefault(emptyList()))
             val adapter = ViewerAdapter(
@@ -65,7 +70,8 @@ class ViewerActivity : PdfActivity() {
                 rotationProvider = { viewRotation },
                 baseWidthProvider = { (resources.displayMetrics.widthPixels * BASE_FACTOR).toInt() },
                 onZoom = { zoomed -> binding.pager.isUserInputEnabled = !zoomed },
-                onZoomSettled = { position, z -> upgrade(position, z) }
+                onZoomSettled = { position, z -> upgrade(position, z) },
+                onLongPress = { position, fx, fy -> onPageLongPress(position, fx, fy) }
             )
             this.adapter = adapter
             binding.pager.adapter = adapter
@@ -129,15 +135,82 @@ class ViewerActivity : PdfActivity() {
             adapter?.setHighlight(-1, null)
             return
         }
+        val cached = textIndex
+        if (cached != null) {
+            applyMatches(PdfEngine.searchIndex(cached, q, false))
+            return
+        }
         runTask(getString(R.string.search_progress), onDone = found@{ list ->
             if (list == null) return@found
-            matches = list
-            matchIndex = if (list.isEmpty()) -1 else 0
-            updateSearchCount()
-            showMatch()
+            applyMatches(list)
         }) {
-            PdfEngine.search(f, q, false)
+            val built = PdfEngine.indexText(f)
+            textIndex = built
+            PdfEngine.searchIndex(built, q, false)
         }
+    }
+
+    private fun applyMatches(list: List<PdfEngine.Match>) {
+        matches = list
+        matchIndex = if (list.isEmpty()) -1 else 0
+        updateSearchCount()
+        showMatch()
+    }
+
+    /** Long press on a page: offer to copy the word or the whole page. */
+    private fun onPageLongPress(position: Int, fx: Float, fy: Float) {
+        val f = current ?: return
+        val size = sizes.getOrNull(position) ?: return
+        val px = fx * size[0]
+        val py = fy * size[1]
+        runTask(getString(R.string.search_progress), onDone = found@{ idx ->
+            if (idx == null) return@found
+            val words = PdfEngine.wordsOnPage(idx, position + 1)
+            if (words.isEmpty()) {
+                offerPageCopy(f, position)
+                return@found
+            }
+            val hit = words.minByOrNull { w ->
+                val dx = (px - (w.x + w.w / 2f)).toDouble()
+                val dy = (py - (w.y + w.h / 2f)).toDouble()
+                dx * dx + dy * dy
+            }
+            showCopyDialog(f, position, hit)
+        }) {
+            textIndex ?: PdfEngine.indexText(f).also { textIndex = it }
+        }
+    }
+
+    private fun showCopyDialog(f: File, position: Int, word: PdfEngine.Word?) {
+        val title = word?.text?.takeIf { it.isNotBlank() } ?: getString(R.string.copy_this_page)
+        val options = arrayOf(
+            getString(R.string.copy_word), getString(R.string.copy_whole_page)
+        )
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle(title)
+            .setItems(options) { _, which ->
+                if (which == 0 && word != null) copyToClipboard(word.text)
+                else offerPageCopy(f, position)
+            }
+            .setNegativeButton(R.string.action_cancel, null)
+            .show()
+    }
+
+    private fun offerPageCopy(f: File, position: Int) {
+        lifecycleScope.launch {
+            val t = withContext(Dispatchers.IO) {
+                runCatching { PdfEngine.pageText(f, position + 1) }.getOrDefault("")
+            }
+            if (t.isBlank()) toast(getString(R.string.copy_nothing))
+            else copyToClipboard(t)
+        }
+    }
+
+    private fun copyToClipboard(text: String) {
+        val cm = getSystemService(android.content.Context.CLIPBOARD_SERVICE)
+                as android.content.ClipboardManager
+        cm.setPrimaryClip(android.content.ClipData.newPlainText("NovaPDF", text))
+        toast(getString(R.string.copied))
     }
 
     private fun stepMatch(delta: Int) {

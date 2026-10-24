@@ -33,6 +33,7 @@ class LinksActivity : PdfActivity() {
     private var current = 0
     private val sizes = mutableListOf<FloatArray>()
     private var found: List<PdfEngine.FoundLink> = emptyList()
+    private var rectPlaced = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -48,6 +49,7 @@ class LinksActivity : PdfActivity() {
         binding.prevPage.setOnClickListener { goTo(current - 1) }
         binding.nextPage.setOnClickListener { goTo(current + 1) }
         binding.btnRun.setOnClickListener { run() }
+        binding.btnPlace.setOnClickListener { togglePlacement() }
         binding.modeGroup.addOnButtonCheckedListener { _, id, checked ->
             if (checked) applyMode(id == R.id.modeManual)
         }
@@ -61,6 +63,29 @@ class LinksActivity : PdfActivity() {
         )
         buildColourRow()
         pickPdf()
+    }
+
+    /** Full-screen placement: hide the controls so the page fills the screen. */
+    private var placing = false
+
+    private fun togglePlacement() {
+        if (!binding.modeManual.isChecked) {
+            binding.modeGroup.check(R.id.modeManual)
+        }
+        placing = !placing
+        val chrome = if (placing) android.view.View.GONE else android.view.View.VISIBLE
+        binding.info.visibility = chrome
+        binding.kindGroup.visibility = chrome
+        binding.textWrap.visibility = chrome
+        binding.fontRow.visibility = chrome
+        binding.opacityRow.visibility = chrome
+        binding.colourRow.visibility = chrome
+        binding.urlWrap.visibility = chrome
+        binding.applyAll.visibility = chrome
+        binding.btnRun.visibility = chrome
+        binding.btnPlace.text = if (placing) getString(R.string.links_done)
+        else getString(R.string.links_fullscreen)
+        if (!placing) applyKind()
     }
 
     /** Icon vs custom text for the manual link. */
@@ -189,6 +214,7 @@ class LinksActivity : PdfActivity() {
             if (found.isEmpty()) getString(R.string.links_none)
             else getString(R.string.links_found, found.size)
         }
+        if (!manual && placing) togglePlacement()
         binding.kindGroup.visibility = if (manual) android.view.View.VISIBLE else android.view.View.GONE
         if (manual) applyKind() else {
             binding.textWrap.visibility = android.view.View.GONE
@@ -208,8 +234,12 @@ class LinksActivity : PdfActivity() {
         binding.pageLabel.text = "${index + 1} / $pageCount"
         binding.prevPage.isEnabled = index > 0
         binding.nextPage.isEnabled = index < pageCount - 1
-        // a small, icon-sized selection rather than most of the page
-        binding.rectPick.resetTo(0.10f, 0.10f, 0.20f, 0.175f)
+        // a small, icon-sized selection the first time; keep it afterwards so the
+        // same spot can be reused on other pages
+        if (!rectPlaced) {
+            binding.rectPick.resetTo(0.10f, 0.10f, 0.20f, 0.175f)
+            rectPlaced = true
+        }
         val r = renderer ?: return
         val targetW = (resources.displayMetrics.widthPixels * 1.7f).toInt().coerceAtMost(2400)
         lifecycleScope.launch {
@@ -243,8 +273,15 @@ class LinksActivity : PdfActivity() {
                 val size = binding.sizeInput.text?.toString()?.toFloatOrNull() ?: 18f
                 val fonts = PdfEngine.LINK_FONTS
                 val font = fonts[binding.fontSpinner.selectedItemPosition.coerceIn(0, fonts.size - 1)]
+                val all = binding.applyAll.isChecked
                 runAndSave(Files.suggestName(sourceName, "_links")) { out ->
-                    PdfEngine.addTextLink(src, current + 1, x, y, size, body, font, chosenColour, url, opacity, out)
+                    if (all) {
+                        PdfEngine.addTextLinkAllPages(src, x, y, size, body, font,
+                            chosenColour, url, opacity, out)
+                    } else {
+                        PdfEngine.addTextLink(src, current + 1, x, y, size, body, font,
+                            chosenColour, url, opacity, out)
+                    }
                 }
                 return
             }
@@ -253,8 +290,13 @@ class LinksActivity : PdfActivity() {
             java.io.FileOutputStream(icon).use {
                 makeIcon(chosenColour).compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)
             }
+            val all = binding.applyAll.isChecked
             runAndSave(Files.suggestName(sourceName, "_links")) { out ->
-                PdfEngine.addLinkIcon(src, current + 1, x, y, side, icon, url, opacity, out)
+                if (all) {
+                    PdfEngine.addLinkIconAllPages(src, x, y, side, icon, url, opacity, out)
+                } else {
+                    PdfEngine.addLinkIcon(src, current + 1, x, y, side, icon, url, opacity, out)
+                }
             }
             return
         }

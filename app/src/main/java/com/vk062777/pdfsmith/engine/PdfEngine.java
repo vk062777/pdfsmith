@@ -1132,34 +1132,156 @@ public final class PdfEngine {
         }
     }
 
-    /** Find every occurrence of [query]. Empty query returns nothing. */
-    public static List<Match> search(File src, String query, boolean matchCase) throws Exception {
-        List<Match> out = new ArrayList<>();
-        if (query == null || query.trim().isEmpty()) return out;
+    /** A word on a page, in display points. */
+    public static final class Word {
+        public final int page;
+        public final String text;
+        public final float x, y, w, h;
+
+        public Word(int page, String text, float x, float y, float w, float h) {
+            this.page = page; this.text = text; this.x = x; this.y = y; this.w = w; this.h = h;
+        }
+    }
+
+    /**
+     * The text of a document, already measured. Building this once makes repeated
+     * searches instant and lets the reader look up the word under a finger.
+     * Only plain values are kept, so the document can be closed afterwards.
+     */
+    public static final class TextIndex {
+        public final String text;
+        final float[] gx, gy, gw, gh;   // per glyph, unrotated frame, y down
+        final int[] pageOf;
+        final float[][] geom;           // per page: {cropW, cropH, rotation}
+        final int[] spaces;             // glyph index just after a whitespace char
+
+        TextIndex(String text, float[] gx, float[] gy, float[] gw, float[] gh,
+                  int[] pageOf, float[][] geom, int[] spaces) {
+            this.text = text; this.gx = gx; this.gy = gy; this.gw = gw; this.gh = gh;
+            this.pageOf = pageOf; this.geom = geom; this.spaces = spaces;
+        }
+    }
+
+    /** Measure the whole document once. */
+    public static TextIndex indexText(File src) throws Exception {
         try (PDDocument d = open(src)) {
             PositionedText pt = positionedText(d);
-            float[][] g = pageGeom(d);
-            String text = pt.text();
-            String hay = matchCase ? text : text.toLowerCase();
-            String needle = matchCase ? query : query.toLowerCase();
-            int from = 0;
-            while (true) {
-                int i = hay.indexOf(needle, from);
-                if (i < 0) break;
-                int pg = pt.pageAt(i);
-                float[] b = boxOf(pt, i, i + needle.length());
-                if (b != null && pg >= 1 && pg < g.length) {
-                    float[] db = unrotatedToDisplay(g[pg][0], g[pg][1], (int) g[pg][2],
-                            b[0], b[1], b[2], b[3]);
-                    int cs = Math.max(0, i - 28);
-                    int ce = Math.min(text.length(), i + needle.length() + 28);
-                    out.add(new Match(pg, db[0], db[1], db[2], db[3],
-                            text.substring(cs, ce).replace('\n', ' ').trim()));
+            float[][] geom = pageGeom(d);
+            int n = pt.chars.size();
+            float[] gx = new float[n], gy = new float[n], gw = new float[n], gh = new float[n];
+            int[] pageOf = new int[n];
+            StringBuilder b = new StringBuilder(n);
+            List<Integer> breaks = new ArrayList<>();
+            for (int i = 0; i < n; i++) {
+                com.tom_roush.pdfbox.text.TextPosition tp = pt.pos.get(i);
+                b.append(pt.chars.get(i));
+                pageOf[i] = pt.page.get(i);
+                if (tp == null) {
+                    breaks.add(i);
+                    continue;
                 }
-                from = i + Math.max(1, needle.length());
+                gx[i] = tp.getXDirAdj();
+                gh[i] = tp.getHeightDir();
+                gy[i] = tp.getYDirAdj() - gh[i];
+                gw[i] = tp.getWidthDirAdj();
+            }
+            int[] spaces = new int[breaks.size()];
+            for (int i = 0; i < breaks.size(); i++) spaces[i] = breaks.get(i);
+            return new TextIndex(b.toString(), gx, gy, gw, gh, pageOf, geom, spaces);
+        }
+    }
+
+    /** Box of the glyphs in [from, to) in the unrotated frame. */
+    private static float[] indexBox(TextIndex idx, int from, int to) {
+        float minX = Float.MAX_VALUE, minY = Float.MAX_VALUE;
+        float maxX = -Float.MAX_VALUE, maxY = -Float.MAX_VALUE;
+        int seen = 0;
+        for (int k = from; k < to && k < idx.gx.length; k++) {
+            if (idx.gw[k] <= 0f && idx.gh[k] <= 0f) continue;   // whitespace marker
+            minX = Math.min(minX, idx.gx[k]);
+            minY = Math.min(minY, idx.gy[k]);
+            maxX = Math.max(maxX, idx.gx[k] + idx.gw[k]);
+            maxY = Math.max(maxY, idx.gy[k] + idx.gh[k]);
+            seen++;
+        }
+        return seen == 0 ? null : new float[]{minX, minY, maxX - minX, maxY - minY};
+    }
+
+    /** Search a pre-built index. Empty query returns nothing. */
+    public static List<Match> searchIndex(TextIndex idx, String query, boolean matchCase) {
+        List<Match> out = new ArrayList<>();
+        if (idx == null || query == null || query.trim().isEmpty()) return out;
+        String hay = matchCase ? idx.text : idx.text.toLowerCase();
+        String needle = matchCase ? query : query.toLowerCase();
+        int from = 0;
+        while (true) {
+            int i = hay.indexOf(needle, from);
+            if (i < 0) break;
+            int pg = -1;
+            for (int k = i; k < idx.pageOf.length; k++) {
+                if (idx.gw[k] > 0f || idx.gh[k] > 0f) { pg = idx.pageOf[k]; break; }
+            }
+            float[] b = indexBox(idx, i, i + needle.length());
+            if (b != null && pg >= 1 && pg < idx.geom.length) {
+                float[] db = unrotatedToDisplay(idx.geom[pg][0], idx.geom[pg][1],
+                        (int) idx.geom[pg][2], b[0], b[1], b[2], b[3]);
+                int cs = Math.max(0, i - 28);
+                int ce = Math.min(idx.text.length(), i + needle.length() + 28);
+                out.add(new Match(pg, db[0], db[1], db[2], db[3],
+                        idx.text.substring(cs, ce).replace('\n', ' ').trim()));
+            }
+            from = i + Math.max(1, needle.length());
+        }
+        return out;
+    }
+
+    /** Every word on a page, in display points, for tap-to-copy. */
+    public static List<Word> wordsOnPage(TextIndex idx, int page) {
+        List<Word> out = new ArrayList<>();
+        if (idx == null) return out;
+        int start = -1;
+        for (int i = 0; i <= idx.text.length(); i++) {
+            boolean blank = i == idx.text.length() || Character.isWhitespace(idx.text.charAt(i))
+                    || (idx.gw[i] <= 0f && idx.gh[i] <= 0f);
+            if (!blank && start < 0) start = i;
+            if (blank && start >= 0) {
+                int pg = -1;
+                for (int k = start; k < i; k++) {
+                    if (idx.gw[k] > 0f || idx.gh[k] > 0f) { pg = idx.pageOf[k]; break; }
+                }
+                if (pg == page) {
+                    float[] b = indexBox(idx, start, i);
+                    if (b != null) {
+                        float[] db = unrotatedToDisplay(idx.geom[pg][0], idx.geom[pg][1],
+                                (int) idx.geom[pg][2], b[0], b[1], b[2], b[3]);
+                        out.add(new Word(pg, idx.text.substring(start, i),
+                                db[0], db[1], db[2], db[3]));
+                    }
+                }
+                start = -1;
             }
         }
         return out;
+    }
+
+    /** All the text on one page, as a reader would read it. */
+    public static String pageText(File src, int page1) throws Exception {
+        try (PDDocument d = open(src)) {
+            if (page1 < 1 || page1 > d.getNumberOfPages()) return "";
+            com.tom_roush.pdfbox.text.PDFTextStripper st =
+                    new com.tom_roush.pdfbox.text.PDFTextStripper();
+            st.setStartPage(page1);
+            st.setEndPage(page1);
+            st.setSortByPosition(true);
+            String t = st.getText(d);
+            return t == null ? "" : t.trim();
+        }
+    }
+
+    /** Find every occurrence of [query]. Empty query returns nothing. */
+    public static List<Match> search(File src, String query, boolean matchCase) throws Exception {
+        if (query == null || query.trim().isEmpty()) return new ArrayList<>();
+        return searchIndex(indexText(src), query, matchCase);
     }
 
     /** URL / e-mail shapes worth turning into links. */
@@ -1266,63 +1388,78 @@ public final class PdfEngine {
      * exactly on the icon, so only a tap on the icon opens it.
      */
     public static void addLinkIcon(File src, int page1, float xd, float yd, float size,
-                                   File iconPng, String url, File out) throws Exception {
-        addLinkIcon(src, page1, xd, yd, size, iconPng, url, 1f, out);
-    }
-
-    /** As above, with an opacity for the drawn icon (1 = fully solid). */
-    public static void addLinkIcon(File src, int page1, float xd, float yd, float size,
                                    File iconPng, String url, float opacity,
                                    File out) throws Exception {
         String u = normaliseUrl(url);
         if (u == null) throw new IllegalArgumentException("Not a valid link");
         try (PDDocument d = open(src)) {
-            if (page1 < 1 || page1 > d.getNumberOfPages()) {
-                throw new IllegalArgumentException("No such page");
-            }
-            PDPage page = d.getPage(page1 - 1);
-            PDRectangle crop = page.getCropBox();
-            float w = crop.getWidth(), h = crop.getHeight();
-            int r = ((page.getRotation() % 360) + 360) % 360;
-            float dw = (r == 90 || r == 270) ? h : w;
-            float dh = (r == 90 || r == 270) ? w : h;
-
-            float s = Math.max(10f, Math.min(size, Math.min(dw, dh) * 0.5f));
-            xd = Math.max(0f, Math.min(xd, dw - s));
-            yd = Math.max(0f, Math.min(yd, dh - s));
-
-            if (iconPng != null && iconPng.exists()) {
-                PDImageXObject icon = PDImageXObject.createFromFile(iconPng.getAbsolutePath(), d);
-                Matrix m;
-                switch (r) {
-                    case 90:  m = new Matrix(0, 1, -1, 0, w, 0); break;
-                    case 180: m = new Matrix(-1, 0, 0, -1, w, h); break;
-                    case 270: m = new Matrix(0, -1, 1, 0, 0, h); break;
-                    default:  m = new Matrix(1, 0, 0, 1, 0, 0); break;
-                }
-                try (PDPageContentStream cs =
-                             new PDPageContentStream(d, page, AppendMode.APPEND, true, true)) {
-                    cs.saveGraphicsState();
-                    cs.transform(m);
-                    applyOpacity(cs, opacity);
-                    cs.drawImage(icon, xd, dh - yd - s, s, s);
-                    cs.restoreGraphicsState();
-                }
-            }
-
-            PDRectangle rect = displayBoxToPage(crop, r, xd, yd, s, s);
-            com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationLink link =
-                    new com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationLink();
-            link.setRectangle(rect);
-            link.setBorderStyle(new com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDBorderStyleDictionary());
-            link.getBorderStyle().setWidth(0f);
-            com.tom_roush.pdfbox.pdmodel.interactive.action.PDActionURI action =
-                    new com.tom_roush.pdfbox.pdmodel.interactive.action.PDActionURI();
-            action.setURI(u);
-            link.setAction(action);
-            page.getAnnotations().add(link);
+            drawIcon(d, page1, xd, yd, size, iconPng, u, opacity);
             d.save(out);
         }
+    }
+
+    /** Put the same icon at the same spot on EVERY page, saving once. */
+    public static void addLinkIconAllPages(File src, float xd, float yd, float size,
+                                           File iconPng, String url, float opacity,
+                                           File out) throws Exception {
+        String u = normaliseUrl(url);
+        if (u == null) throw new IllegalArgumentException("Not a valid link");
+        try (PDDocument d = open(src)) {
+            for (int p = 1; p <= d.getNumberOfPages(); p++) {
+                try {
+                    drawIcon(d, p, xd, yd, size, iconPng, u, opacity);
+                } catch (Exception ignore) { }
+            }
+            d.save(out);
+        }
+    }
+
+    private static void drawIcon(PDDocument d, int page1, float xd, float yd, float size,
+                                 File iconPng, String url, float opacity) throws Exception {
+        if (page1 < 1 || page1 > d.getNumberOfPages()) {
+            throw new IllegalArgumentException("No such page");
+        }
+        PDPage page = d.getPage(page1 - 1);
+        PDRectangle crop = page.getCropBox();
+        float w = crop.getWidth(), h = crop.getHeight();
+        int r = ((page.getRotation() % 360) + 360) % 360;
+        float dw = (r == 90 || r == 270) ? h : w;
+        float dh = (r == 90 || r == 270) ? w : h;
+
+        float s = Math.max(10f, Math.min(size, Math.min(dw, dh) * 0.5f));
+        xd = Math.max(0f, Math.min(xd, dw - s));
+        yd = Math.max(0f, Math.min(yd, dh - s));
+
+        if (iconPng != null && iconPng.exists()) {
+            PDImageXObject icon = PDImageXObject.createFromFile(iconPng.getAbsolutePath(), d);
+            Matrix m;
+            switch (r) {
+                case 90:  m = new Matrix(0, 1, -1, 0, w, 0); break;
+                case 180: m = new Matrix(-1, 0, 0, -1, w, h); break;
+                case 270: m = new Matrix(0, -1, 1, 0, 0, h); break;
+                default:  m = new Matrix(1, 0, 0, 1, 0, 0); break;
+            }
+            try (PDPageContentStream cs =
+                         new PDPageContentStream(d, page, AppendMode.APPEND, true, true)) {
+                cs.saveGraphicsState();
+                cs.transform(m);
+                applyOpacity(cs, opacity);
+                cs.drawImage(icon, xd, dh - yd - s, s, s);
+                cs.restoreGraphicsState();
+            }
+        }
+
+        PDRectangle rect = displayBoxToPage(crop, r, xd, yd, s, s);
+        com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationLink link =
+                new com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationLink();
+        link.setRectangle(rect);
+        link.setBorderStyle(new com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDBorderStyleDictionary());
+        link.getBorderStyle().setWidth(0f);
+        com.tom_roush.pdfbox.pdmodel.interactive.action.PDActionURI action =
+                new com.tom_roush.pdfbox.pdmodel.interactive.action.PDActionURI();
+        action.setURI(url);
+        link.setAction(action);
+        page.getAnnotations().add(link);
     }
 
     /** Apply a non-stroking alpha, used for the opacity of drawn link art. */
@@ -1357,13 +1494,6 @@ public final class PdfEngine {
      */
     public static void addTextLink(File src, int page1, float xd, float yd, float size,
                                    String text, String fontName, int argb,
-                                   String url, File out) throws Exception {
-        addTextLink(src, page1, xd, yd, size, text, fontName, argb, url, 1f, out);
-    }
-
-    /** As above, with an opacity for the drawn text (1 = fully solid). */
-    public static void addTextLink(File src, int page1, float xd, float yd, float size,
-                                   String text, String fontName, int argb,
                                    String url, float opacity, File out) throws Exception {
         String u = normaliseUrl(url);
         if (u == null) throw new IllegalArgumentException("Not a valid link");
@@ -1371,56 +1501,82 @@ public final class PdfEngine {
         if (safe == null || safe.trim().isEmpty()) {
             throw new IllegalArgumentException("Enter the text to show");
         }
-        float sz = Math.max(6f, Math.min(size, 144f));
         try (PDDocument d = open(src)) {
-            if (page1 < 1 || page1 > d.getNumberOfPages()) {
-                throw new IllegalArgumentException("No such page");
-            }
-            PDPage page = d.getPage(page1 - 1);
-            PDRectangle crop = page.getCropBox();
-            float w = crop.getWidth(), h = crop.getHeight();
-            int r = ((page.getRotation() % 360) + 360) % 360;
-            float dw = (r == 90 || r == 270) ? h : w;
-            float dh = (r == 90 || r == 270) ? w : h;
-
-            PDType1Font font = pickFont(fontName);
-            float tw = font.getStringWidth(safe) / 1000f * sz;
-            float th = sz * 1.3f;
-            xd = Math.max(0f, Math.min(xd, Math.max(0f, dw - tw)));
-            yd = Math.max(0f, Math.min(yd, Math.max(0f, dh - th)));
-            float baseY = yd + sz * 0.82f;
-
-            float px, py;
-            switch (r) {
-                case 90:  px = baseY;      py = xd;         break;
-                case 180: px = w - xd;     py = baseY;      break;
-                case 270: px = w - baseY;  py = h - xd;     break;
-                default:  px = xd;         py = h - baseY;  break;
-            }
-            try (PDPageContentStream cs =
-                         new PDPageContentStream(d, page, AppendMode.APPEND, true, true)) {
-                applyOpacity(cs, opacity);
-                cs.beginText();
-                cs.setFont(font, sz);
-                cs.setNonStrokingColor((argb >> 16) & 0xFF, (argb >> 8) & 0xFF, argb & 0xFF);
-                cs.setTextMatrix(Matrix.getRotateInstance(Math.toRadians(r), px, py));
-                cs.showText(safe);
-                cs.endText();
-            }
-
-            PDRectangle rect = displayBoxToPage(crop, r, xd, yd, tw, th);
-            com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationLink link =
-                    new com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationLink();
-            link.setRectangle(rect);
-            link.setBorderStyle(new com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDBorderStyleDictionary());
-            link.getBorderStyle().setWidth(0f);
-            com.tom_roush.pdfbox.pdmodel.interactive.action.PDActionURI action =
-                    new com.tom_roush.pdfbox.pdmodel.interactive.action.PDActionURI();
-            action.setURI(u);
-            link.setAction(action);
-            page.getAnnotations().add(link);
+            drawText(d, page1, xd, yd, size, safe, fontName, argb, u, opacity);
             d.save(out);
         }
+    }
+
+    /** Write the same link text at the same spot on EVERY page, saving once. */
+    public static void addTextLinkAllPages(File src, float xd, float yd, float size,
+                                           String text, String fontName, int argb,
+                                           String url, float opacity, File out) throws Exception {
+        String u = normaliseUrl(url);
+        if (u == null) throw new IllegalArgumentException("Not a valid link");
+        String safe = winAnsi(text);
+        if (safe == null || safe.trim().isEmpty()) {
+            throw new IllegalArgumentException("Enter the text to show");
+        }
+        try (PDDocument d = open(src)) {
+            for (int p = 1; p <= d.getNumberOfPages(); p++) {
+                try {
+                    drawText(d, p, xd, yd, size, safe, fontName, argb, u, opacity);
+                } catch (Exception ignore) { }
+            }
+            d.save(out);
+        }
+    }
+
+    private static void drawText(PDDocument d, int page1, float xd, float yd, float size,
+                                 String safe, String fontName, int argb,
+                                 String url, float opacity) throws Exception {
+        if (page1 < 1 || page1 > d.getNumberOfPages()) {
+            throw new IllegalArgumentException("No such page");
+        }
+        float sz = Math.max(6f, Math.min(size, 144f));
+        PDPage page = d.getPage(page1 - 1);
+        PDRectangle crop = page.getCropBox();
+        float w = crop.getWidth(), h = crop.getHeight();
+        int r = ((page.getRotation() % 360) + 360) % 360;
+        float dw = (r == 90 || r == 270) ? h : w;
+        float dh = (r == 90 || r == 270) ? w : h;
+
+        PDType1Font font = pickFont(fontName);
+        float tw = font.getStringWidth(safe) / 1000f * sz;
+        float th = sz * 1.3f;
+        xd = Math.max(0f, Math.min(xd, Math.max(0f, dw - tw)));
+        yd = Math.max(0f, Math.min(yd, Math.max(0f, dh - th)));
+        float baseY = yd + sz * 0.82f;
+
+        float px, py;
+        switch (r) {
+            case 90:  px = baseY;      py = xd;         break;
+            case 180: px = w - xd;     py = baseY;      break;
+            case 270: px = w - baseY;  py = h - xd;     break;
+            default:  px = xd;         py = h - baseY;  break;
+        }
+        try (PDPageContentStream cs =
+                     new PDPageContentStream(d, page, AppendMode.APPEND, true, true)) {
+            applyOpacity(cs, opacity);
+            cs.beginText();
+            cs.setFont(font, sz);
+            cs.setNonStrokingColor((argb >> 16) & 0xFF, (argb >> 8) & 0xFF, argb & 0xFF);
+            cs.setTextMatrix(Matrix.getRotateInstance(Math.toRadians(r), px, py));
+            cs.showText(safe);
+            cs.endText();
+        }
+
+        PDRectangle rect = displayBoxToPage(crop, r, xd, yd, tw, th);
+        com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationLink link =
+                new com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationLink();
+        link.setRectangle(rect);
+        link.setBorderStyle(new com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDBorderStyleDictionary());
+        link.getBorderStyle().setWidth(0f);
+        com.tom_roush.pdfbox.pdmodel.interactive.action.PDActionURI action =
+                new com.tom_roush.pdfbox.pdmodel.interactive.action.PDActionURI();
+        action.setURI(url);
+        link.setAction(action);
+        page.getAnnotations().add(link);
     }
 
     /** "example.com" -> "https://example.com"; mail addresses become mailto:. */

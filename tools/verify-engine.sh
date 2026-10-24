@@ -28,7 +28,7 @@ echo "== running engine verification =="
 java -cp "$CP" TestEngine
 
 echo "== rotation / overlay placement (rendered and pixel-checked) =="
-javac -cp "$CP" -d out TestRotate.java TestCrop.java TestEnc.java TestHostile.java TestTextLayer.java TestSearch.java TestLinkIcon.java TestTextLink.java TestOpacity.java
+javac -cp "$CP" -d out TestRotate.java TestCrop.java TestEnc.java TestHostile.java TestTextLayer.java TestSearch.java TestLinkIcon.java TestTextLink.java TestOpacity.java TestAllPages.java TestCopy.java
 java -cp "$CP" TestRotate
 java -cp "$CP" TestCrop
 java -cp "$CP" TestEnc
@@ -60,5 +60,13 @@ python3 verify-textlink.py
 echo "== link opacity (rendered: 40% must be lighter than 100%) =="
 java -cp "$CP" TestOpacity
 python3 verify-opacity.py
+
+echo "== same link on every page =="
+java -cp "$CP" TestAllPages
+python3 verify-allpages.py
+
+echo "== text lookup for tap-to-copy =="
+java -cp "$CP" TestCopy
+python3 verify-copy.py
 python3 -m pip install --quiet pymupdf >/dev/null 2>&1 || true
 python3 verify-render.py

@@ -99,6 +99,9 @@ class OcrActivity : PdfActivity() {
                     }
                 }
                 if (bmp == null) continue
+                // a completely empty page has nothing to recognise: skip it.
+                // Deliberately strict (only truly blank pages) so no text is lost.
+                if (isBlank(bmp)) { bmp.recycle(); continue }
                 val w = bmp.width
                 val h = bmp.height
                 val words = recognise(bmp)
@@ -138,6 +141,22 @@ class OcrActivity : PdfActivity() {
         val cleaned = out.distinct().sorted()
         return if (cleaned.isEmpty()) (1..pageCount).toList() else cleaned
     }
+
+    /** True only for a page with essentially no ink at all. */
+    private fun isBlank(bmp: Bitmap): Boolean = try {
+        val small = Bitmap.createScaledBitmap(bmp, 32, 32, true)
+        val px = IntArray(32 * 32)
+        small.getPixels(px, 0, 32, 0, 0, 32, 32)
+        small.recycle()
+        var dark = 0
+        for (v in px) {
+            val r = (v shr 16) and 0xFF
+            val g = (v shr 8) and 0xFF
+            val b = v and 0xFF
+            if ((r + g + b) / 3 < 200) dark++
+        }
+        dark <= 1
+    } catch (_: Throwable) { false }
 
     private suspend fun recognise(bitmap: Bitmap): List<PdfEngine.OcrWord> =
         suspendCoroutine { cont ->

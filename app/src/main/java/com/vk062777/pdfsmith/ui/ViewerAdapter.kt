@@ -24,7 +24,9 @@ class ViewerAdapter(
     private val rotationProvider: () -> Int,
     private val baseWidthProvider: () -> Int,
     private val onZoom: (Boolean) -> Unit,
-    private val onZoomSettled: (Int, Float) -> Unit
+    private val onZoomSettled: (Int, Float) -> Unit,
+    /** Called on a long press with the page and the point as a fraction of it. */
+    private val onLongPress: (Int, Float, Float) -> Unit
 ) : RecyclerView.Adapter<ViewerAdapter.VH>() {
 
     private val cache = object : LruCache<Int, Bitmap>(MAX_CACHE_BYTES) {
@@ -50,6 +52,27 @@ class ViewerAdapter(
         holder.b.highlight.norm = highlights[position]
         iv.onZoomChanged = onZoom
         iv.onZoomSettled = { z -> onZoomSettled(position, z) }
+        // long press: work out which point of the page the finger is on
+        var downX = 0f
+        var downY = 0f
+        iv.setOnTouchListener { _, e ->
+            if (e.actionMasked == android.view.MotionEvent.ACTION_DOWN) {
+                downX = e.x; downY = e.y
+            }
+            false
+        }
+        iv.setOnLongClickListener {
+            val d = iv.drawable
+            if (d == null || d.intrinsicWidth <= 0 || d.intrinsicHeight <= 0) return@setOnLongClickListener false
+            val m = android.graphics.Matrix()
+            iv.imageMatrix.invert(m)
+            val pts = floatArrayOf(downX, downY)
+            m.mapPoints(pts)
+            val fx = (pts[0] / d.intrinsicWidth).coerceIn(0f, 1f)
+            val fy = (pts[1] / d.intrinsicHeight).coerceIn(0f, 1f)
+            onLongPress(position, fx, fy)
+            true
+        }
         val samePage = holder.boundPosition == position
         holder.boundPosition = position
         holders[position] = holder

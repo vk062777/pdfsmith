@@ -276,6 +276,36 @@ permissions at all, enforced by the CI guard.
 - A rendered opacity check: for both the icon and the text, 40% must come out
   visibly lighter than 100%.
 
+
+## What's new in 1.11.0 — placement, copy, and speed
+
+- **Placement is now full screen.** On the Hyperlinks screen, "Full screen placement"
+  hides the controls so the page fills the screen, which is what you need to place
+  something precisely. Drag anywhere to move the selection, drag a corner handle to
+  resize it (the handles are visible and the touch target is bigger). The position
+  you pick is kept while you page through the document.
+- **Same link on every page.** A "Put the same link on every page" switch places the
+  icon or the text at the same spot on all pages in one go. Verified by rendering:
+  the mark lands at exactly the same place on all five test pages, including a
+  rotated one.
+- **Copy text from a PDF.** Long press a page in the reader to copy the word under
+  your finger, or the whole page. This is what was missing before: a searchable PDF
+  opened in this app could not be copied from.
+- **Speed.**
+  - Searching no longer re-reads the document. The text is measured once and reused,
+    so the first search pays for the extraction and every search after it is
+    essentially instant: measured 476 ms to index, then **3 ms for five searches**.
+  - OCR skips pages that are completely empty (only truly blank pages, so no text is
+    ever lost).
+
+### Verification added
+
+- Same-link-on-every-page is checked by rendering every page, including a rotated
+  one: the mark must be at the requested spot (89.8% ink for the icon, 26.3% for the
+  text) with 0% elsewhere.
+- The tap-to-copy word boxes are checked against the rendered ink, and the page text
+  against what is actually written on the page.
+
 ## Features
 
 | Tool | What it does |

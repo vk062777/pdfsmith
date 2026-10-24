@@ -262,4 +262,14 @@
     <string name="image_ocr_copied">Text copied \u2014 paste it anywhere</string>
     <string name="hint_link_opacity">Opacity %</string>
     <string name="label_link_opacity">Link opacity</string>
+    <string name="links_fullscreen">Full screen placement</string>
+    <string name="links_done">Done</string>
+    <string name="links_apply_all">Put the same link on every page</string>
+    <string name="links_placed_all">Placed on %1$d pages</string>
+    <string name="copy_word">Copy word</string>
+    <string name="copy_whole_page">Copy whole page</string>
+    <string name="copy_this_page">This page</string>
+    <string name="copy_nothing">No text on this page</string>
+    <string name="copied">Copied</string>
+    <string name="hint_copy">Long press the page to copy text</string>
 </resources>

@@ -101,7 +101,7 @@ class CropView @JvmOverloads constructor(
         val y = event.y
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
-                val near = 44f
+                val near = 64f
                 mode = when {
                     abs(x - rect.left) < near && abs(y - rect.top) < near -> 2
                     abs(x - rect.right) < near && abs(y - rect.top) < near -> 3
