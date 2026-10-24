@@ -231,9 +231,9 @@ class ToolsActivity : PdfActivity() {
             textSize = 12f
             setTextColor(getColor(R.color.text_secondary))
         })
-        val sp = Spinner(this)
-        sp.background = getDrawable(R.drawable.bg_spinner_pill)
-        sp.popupBackground = getDrawable(R.drawable.bg_popup_pill)
+        // inflated from a layout so the pill shape and the rounded drop-down are
+        // declared once, in XML
+        val sp = layoutInflater.inflate(R.layout.view_spinner, box, false) as Spinner
         sp.adapter = ArrayAdapter(this, R.layout.item_dropdown, options)
         sp.setSelection(selected)
         box.addView(sp)

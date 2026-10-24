@@ -58,7 +58,6 @@ class LinksActivity : PdfActivity() {
         binding.kindGroup.addOnButtonCheckedListener { _, _, checked ->
             if (checked) applyKind()
         }
-        binding.fontSpinner.popupBackground = getDrawable(R.drawable.bg_popup_pill)
         binding.fontSpinner.adapter = android.widget.ArrayAdapter(
             this, R.layout.item_dropdown, PdfEngine.LINK_FONTS
         )
