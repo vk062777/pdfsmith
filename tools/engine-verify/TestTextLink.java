@@ -26,7 +26,7 @@ public class TestTextLink {
     for (int page = 1; page <= 4; page++) {
       File next = new File(W, "tl_out2_" + page + ".pdf");
       PdfEngine.addTextLink(cur, page, 300f, 200f, 18f, "Click here", "Helvetica Bold",
-              0xFFCC0000, "https://example.com/offer", next);
+              0xFFCC0000, "https://example.com/offer", 1f, next);
       cur = next;
     }
     System.out.println("text links written: " + cur.getName());

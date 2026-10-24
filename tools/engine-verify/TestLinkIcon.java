@@ -35,7 +35,7 @@ public class TestLinkIcon {
       d.save(src);
     }
     File out = new File(W, "icon_out.pdf");
-    PdfEngine.addLinkIcon(src, 1, 420f, 120f, 40f, icon, "https://example.com", out);
+    PdfEngine.addLinkIcon(src, 1, 420f, 120f, 40f, icon, "https://example.com", 1f, out);
     System.out.println("icon link written");
 
     // ---- 3. search timing on a 200 page document ----
