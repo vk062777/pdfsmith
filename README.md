@@ -573,3 +573,14 @@ anything else (INTERNET included) creeps in.
   rest were spaced - and all six were slightly too big for the dialog. They are
   now the same size with the same gap.
 - A CI guard now fails the build if a tool would ever open with no heading.
+## What's new in 2.2.2
+
+- **Input fields are pills, and the label can no longer overlap the value.** The
+  Material TextInputLayout was the problem: on this theme the label refused to
+  float and ended up drawn on top of what you typed, and its shape kept coming out
+  as a bare underline. Every field is now a plain EditText with our own rounded
+  background and an in-field hint, so the two cannot collide and the shape is ours.
+  Affects metadata, watermark, protect, unlock, signature, split, page numbering
+  and forms. Passwords keep the reveal eye.
+- **The page-count line under the OCR screen is gone**, and so is the
+  "Choose a folder, then Run." line on the extract-images screen.

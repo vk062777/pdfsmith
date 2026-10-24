@@ -60,7 +60,6 @@ class OcrActivity : PdfActivity() {
             runTask(getString(R.string.msg_processing), onDone = opened@{ count ->
                 if (count == null || count == 0) return@opened
                 pageCount = count
-                binding.info.text = getString(R.string.label_pages, count)
                 binding.btnRun.isEnabled = true
             }) {
                 source = f

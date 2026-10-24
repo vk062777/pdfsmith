@@ -9,8 +9,6 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.google.android.material.button.MaterialButton
-import com.google.android.material.textfield.TextInputEditText
-import com.google.android.material.textfield.TextInputLayout
 import com.vk062777.pdfsmith.databinding.ActivityFormsBinding
 import com.vk062777.pdfsmith.engine.PdfEngine
 import com.vk062777.pdfsmith.util.Files
@@ -87,25 +85,25 @@ class FormsActivity : PdfActivity() {
                 isChecked = field.value.equals("on", true) || field.value == "1" || field.value.equals("yes", true)
             }
         } else {
-            val til = TextInputLayout(this).apply {
+            // a plain pill field - see ToolsActivity.addField for why
+            val opts = if (field.options.isNotEmpty()) " — " + field.options.joinToString(", ") else ""
+            val et = EditText(this).apply {
+                hint = field.type + opts
+                inputType = InputType.TYPE_CLASS_TEXT
+                background = getDrawable(R.drawable.bg_field_pill)
+                val px = (16 * resources.displayMetrics.density).toInt()
+                val py = (14 * resources.displayMetrics.density).toInt()
+                setPadding(px, py, px, py)
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
-                )
-                val opts = if (field.options.isNotEmpty()) " — " + field.options.joinToString(", ") else ""
-                hint = field.type + opts
-                boxBackgroundMode = TextInputLayout.BOX_BACKGROUND_FILLED
-                boxBackgroundColor = getColor(R.color.field_bg)
-                val r = (26 * resources.displayMetrics.density)
-                setBoxCornerRadii(r, r, r, r)
-                setBoxStrokeWidth(0)
-                setBoxStrokeWidthFocused(0)
+                ).also { it.topMargin = (10 * resources.displayMetrics.density).toInt() }
+                setTextColor(getColor(R.color.text_primary))
+                setHintTextColor(getColor(R.color.text_secondary))
+                textSize = 15f
+                maxLines = 1
+                setText(field.value ?: "")
             }
-            val et = TextInputEditText(this).apply {
-                inputType = if (field.type == "text") InputType.TYPE_CLASS_TEXT else InputType.TYPE_CLASS_TEXT
-            }
-            til.addView(et)
-            if (!field.value.isNullOrEmpty()) til.editText?.setText(field.value)
-            til
+            et
         }
         binding.container.addView(view)
         rows.add(Row(field, view))
@@ -117,7 +115,6 @@ class FormsActivity : PdfActivity() {
         rows.forEach { row ->
             when (val v = row.view) {
                 is CheckBox -> values[row.field.name] = if (v.isChecked) "true" else "false"
-                is TextInputLayout -> values[row.field.name] = v.editText?.text?.toString() ?: ""
                 is EditText -> values[row.field.name] = v.text.toString()
                 else -> { }
             }

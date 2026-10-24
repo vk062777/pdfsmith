@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.text.InputType
 import android.view.Menu
 import android.view.MenuItem
+import android.view.MotionEvent
 import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.EditText
@@ -14,8 +15,6 @@ import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.documentfile.provider.DocumentFile
 import com.google.android.material.switchmaterial.SwitchMaterial
-import com.google.android.material.textfield.TextInputEditText
-import com.google.android.material.textfield.TextInputLayout
 import com.vk062777.pdfsmith.databinding.ActivityToolsBinding
 import com.vk062777.pdfsmith.engine.PdfEngine
 import com.vk062777.pdfsmith.engine.PdfSigner
@@ -151,30 +150,62 @@ class ToolsActivity : PdfActivity() {
 
     // ---- dynamic parameter UI ---------------------------------------------
 
+    /**
+     * A pill-shaped text field.
+     *
+     * Built from a plain EditText on purpose: a Material TextInputLayout puts the
+     * label in a floating box, and on this theme the label refused to float and
+     * ended up drawn on top of the value. A hint inside a rounded field can never
+     * overlap what you type, and the shape is ours.
+     */
     private fun addField(hint: String, inputType: Int = InputType.TYPE_CLASS_TEXT, prefill: String = ""): EditText {
         val masked = (inputType and InputType.TYPE_TEXT_VARIATION_PASSWORD) != 0 ||
                 (inputType and InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD) != 0
-        val til = TextInputLayout(this).apply {
+        val et = EditText(this).apply {
+            this.hint = hint
+            this.inputType = inputType
+            background = getDrawable(R.drawable.bg_field_pill)
+            setPadding(dp(18), dp(14), dp(18), dp(14))
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
-            ).also { it.topMargin = dp(12) }
-            this.hint = hint
-            // Set the shape here rather than trusting the theme: a field must never
-            // come out as a bare underline.
-            boxBackgroundMode = TextInputLayout.BOX_BACKGROUND_FILLED
-            boxBackgroundColor = getColor(R.color.field_bg)
-            setBoxCornerRadii(dp(26).toFloat(), dp(26).toFloat(), dp(26).toFloat(), dp(26).toFloat())
-            setBoxStrokeWidth(0)
-            setBoxStrokeWidthFocused(0)
-            if (masked) endIconMode = TextInputLayout.END_ICON_PASSWORD_TOGGLE
+            ).also { it.topMargin = dp(10) }
+            setTextColor(getColor(R.color.text_primary))
+            setHintTextColor(getColor(R.color.text_secondary))
+            textSize = 15f
+            maxLines = 1
+            setText(prefill)
+            if (masked) attachRevealEye(this)
         }
-        val et = TextInputEditText(this).apply { this.inputType = inputType }
-        til.addView(et)
-        // Only set the text once the field is attached - otherwise the label never
-        // floats and ends up drawn on top of the value.
-        if (prefill.isNotEmpty()) til.editText?.setText(prefill)
-        binding.params.addView(til)
+        binding.params.addView(et)
         return et
+    }
+
+    /** A little eye on the right that shows or hides what was typed. */
+    private fun attachRevealEye(field: EditText) {
+        var shown = false
+        fun paint() {
+            val d = getDrawable(if (shown) R.drawable.ic_eye_off else R.drawable.ic_eye)
+            d?.setBounds(0, 0, dp(22), dp(22))
+            d?.setTint(getColor(R.color.text_secondary))
+            field.setCompoundDrawables(null, null, d, null)
+            field.compoundDrawablePadding = dp(8)
+        }
+        paint()
+        field.setOnTouchListener { v, e ->
+            val onEye = e.actionMasked == MotionEvent.ACTION_UP &&
+                    e.x >= v.width - v.paddingEnd - dp(34)
+            if (onEye) {
+                shown = !shown
+                val sel = field.selectionEnd.coerceAtLeast(0)
+                field.inputType = if (shown)
+                    InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
+                else
+                    InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+                field.setSelection(sel.coerceAtMost(field.text?.length ?: 0))
+                paint()
+                true
+            } else false
+        }
     }
 
     /** True when a password would fall to a trivial guess. Length matters most. */
@@ -285,12 +316,10 @@ class ToolsActivity : PdfActivity() {
                 fSplitAll = addSwitch(getString(R.string.split_all_pages), false)
                 fRanges = addField(getString(R.string.hint_ranges), InputType.TYPE_CLASS_TEXT, "1-3, 4-6")
                 binding.outputHint.visibility = View.VISIBLE
-                binding.outputHint.text = "Choose a folder, then Run."
             }
             Action.EXTRACT -> {
                 fExtractPages = addField(getString(R.string.hint_extract_pages), InputType.TYPE_CLASS_TEXT, "")
                 binding.outputHint.visibility = View.VISIBLE
-                binding.outputHint.text = "Choose a folder, then Run."
             }
             else -> { }
         }
