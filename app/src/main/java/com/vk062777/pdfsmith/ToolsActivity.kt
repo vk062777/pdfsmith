@@ -372,36 +372,108 @@ class ToolsActivity : PdfActivity() {
     }
 
     private fun showVerification(list: List<PdfSigner.SignatureInfo>) {
-        val msg = if (list.isEmpty()) {
-            getString(R.string.msg_not_signed)
-        } else {
-            buildString {
-                list.forEachIndexed { i, s ->
-                    if (i > 0) append("\n\n")
-                    append(getString(R.string.title_signature)).append(" ").append(i + 1).append("\n")
-                    append("Signer: ").append(s.signerName.ifEmpty { "—" }).append("\n")
-                    append("Date: ").append(s.date.ifEmpty { "—" }).append("\n")
-                    if (s.reason.isNotEmpty()) append("Reason: ").append(s.reason).append("\n")
-                    if (s.location.isNotEmpty()) append("Location: ").append(s.location).append("\n")
-                    append("Certificate: ").append(s.subject.ifEmpty { "—" }).append("\n")
-                    val whole = s.valid && s.coversWholeDocument
-                    append("Status: ").append(
-                        if (whole) getString(R.string.msg_sig_valid)
-                        else if (!s.valid) getString(R.string.msg_sig_invalid)
-                        else getString(R.string.msg_sig_partial)
-                    )
-                    // Only reassure about the certificate when the signature actually holds.
-                    if (whole) append("\n").append(getString(R.string.msg_sig_selfsigned))
-                    if (!whole && s.error.isNotEmpty()) append("\n").append(s.error)
-                }
+        if (isFinishing || isDestroyed) return
+        val v = layoutInflater.inflate(R.layout.dialog_signature_result, null)
+        val icon = v.findViewById<android.widget.ImageView>(R.id.statusIcon)
+        val title = v.findViewById<android.widget.TextView>(R.id.statusTitle)
+        val sub = v.findViewById<android.widget.TextView>(R.id.statusSub)
+        val details = v.findViewById<android.widget.LinearLayout>(R.id.details)
+
+        val allValid = list.isNotEmpty() && list.all { it.valid && it.coversWholeDocument }
+        val anyValid = list.any { it.valid }
+
+        val accent: Int
+        when {
+            list.isEmpty() -> {
+                accent = getColor(R.color.text_secondary)
+                title.text = getString(R.string.verify_unsigned_title)
+                sub.text = getString(R.string.verify_unsigned_sub)
+                icon.setImageResource(R.drawable.ic_verify)
+            }
+            allValid -> {
+                accent = getColor(R.color.success)
+                title.text = getString(R.string.verify_valid_title)
+                sub.text = getString(R.string.verify_valid_sub)
+                icon.setImageResource(R.drawable.ic_check)
+            }
+            !anyValid -> {
+                accent = getColor(R.color.danger)
+                title.text = getString(R.string.verify_invalid_title)
+                sub.text = getString(R.string.verify_invalid_sub)
+                icon.setImageResource(R.drawable.ic_close)
+            }
+            else -> {
+                accent = getColor(R.color.danger)
+                title.text = getString(R.string.verify_partial_title)
+                sub.text = getString(R.string.verify_partial_sub)
+                icon.setImageResource(R.drawable.ic_verify)
             }
         }
-        AlertDialog.Builder(this)
-            .setTitle(R.string.tool_verify)
-            .setMessage(msg)
-            .setPositiveButton(R.string.action_close, null)
-            .show()
+        title.setTextColor(accent)
+        icon.setColorFilter(accent)
+
+        list.forEachIndexed { i, s ->
+            val whole = s.valid && s.coversWholeDocument
+            if (list.size > 1) {
+                details.addView(sectionHeader(getString(R.string.title_signature) + " " + (i + 1)))
+            }
+            addRow(details, getString(R.string.verify_signer), s.signerName.ifEmpty { "\u2014" })
+            addRow(details, getString(R.string.verify_date), s.date.ifEmpty { "\u2014" })
+            if (s.reason.isNotEmpty()) addRow(details, getString(R.string.verify_reason), s.reason)
+            if (s.location.isNotEmpty()) addRow(details, getString(R.string.verify_location), s.location)
+            addRow(details, getString(R.string.verify_certificate), s.subject.ifEmpty { "\u2014" })
+            val status = when {
+                whole -> getString(R.string.msg_sig_valid)
+                !s.valid -> getString(R.string.msg_sig_invalid)
+                else -> getString(R.string.msg_sig_partial)
+            }
+            addRow(details, getString(R.string.verify_status), status,
+                if (whole) getColor(R.color.success) else getColor(R.color.danger))
+            if (whole) {
+                addRow(details, getString(R.string.verify_note), getString(R.string.msg_sig_selfsigned))
+            } else if (s.error.isNotEmpty()) {
+                addRow(details, getString(R.string.verify_detail), s.error, getColor(R.color.danger))
+            }
+        }
+
+        val dialog = AlertDialog.Builder(this).setView(v).create()
+        v.findViewById<android.view.View>(R.id.btnClose).setOnClickListener { dialog.dismiss() }
+        dialog.show()
     }
+
+    /** A small grey caption used to separate several signatures. */
+    private fun sectionHeader(text: String): android.widget.TextView =
+        android.widget.TextView(this).apply {
+            this.text = text
+            setTextColor(getColor(R.color.text_secondary))
+            textSize = 12f
+            setPadding(0, dp(14), 0, dp(2))
+        }
+
+    /** label / value pair, optionally tinted. */
+    private fun addRow(parent: android.widget.LinearLayout, label: String, value: String,
+                       valueColour: Int? = null) {
+        val row = android.widget.LinearLayout(this).apply {
+            orientation = android.widget.LinearLayout.HORIZONTAL
+            setPadding(0, dp(6), 0, dp(6))
+        }
+        val l = android.widget.TextView(this).apply {
+            text = label
+            setTextColor(getColor(R.color.text_secondary))
+            textSize = 13f
+            layoutParams = android.widget.LinearLayout.LayoutParams(dp(96), android.view.ViewGroup.LayoutParams.WRAP_CONTENT)
+        }
+        val r = android.widget.TextView(this).apply {
+            text = value
+            setTextColor(valueColour ?: getColor(R.color.text_primary))
+            textSize = 13f
+            layoutParams = android.widget.LinearLayout.LayoutParams(0, android.view.ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        }
+        row.addView(l); row.addView(r)
+        parent.addView(row)
+    }
+
+    private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
 
     private fun single(produce: (Pair<File, File>) -> Unit) {
         val src = source ?: return toast(getString(R.string.msg_pick_file_first))

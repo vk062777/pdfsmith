@@ -1,11 +1,14 @@
 package com.vk062777.pdfsmith
 
+import android.graphics.RectF
 import android.graphics.pdf.PdfRenderer
 import android.net.Uri
 import android.os.Bundle
 import android.os.ParcelFileDescriptor
 import android.view.Menu
-import android.view.MenuItem
+import android.view.inputmethod.EditorInfo
+import android.view.Menu
+import android.view.inputmethod.EditorInfoItem
 import androidx.lifecycle.lifecycleScope
 import androidx.viewpager2.widget.ViewPager2
 import com.vk062777.pdfsmith.databinding.ActivityViewerBinding
@@ -24,6 +27,9 @@ class ViewerActivity : PdfActivity() {
     private var current: File? = null
     private var adapter: ViewerAdapter? = null
     private var viewRotation = 0
+    private val sizes = mutableListOf<FloatArray>()
+    private var matches: List<PdfEngine.Match> = emptyList()
+    private var matchIndex = -1
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -32,6 +38,7 @@ class ViewerActivity : PdfActivity() {
         setSupportActionBar(binding.toolbar)
         binding.toolbar.setNavigationOnClickListener { finish() }
 
+        wireSearch()
         val uri: Uri? = intent?.data
         if (uri != null) openUri(uri) else pickPdf()
     }
@@ -52,6 +59,8 @@ class ViewerActivity : PdfActivity() {
             pfd = descriptor
             val pr = PageRenderer(PdfRenderer(descriptor))
             renderer = pr
+            sizes.clear()
+            sizes.addAll(runCatching { PdfEngine.pageDisplaySizes(file) }.getOrDefault(emptyList()))
             val adapter = ViewerAdapter(
                 pr.pageCount, pr, lifecycleScope,
                 rotationProvider = { viewRotation },
@@ -87,6 +96,75 @@ class ViewerActivity : PdfActivity() {
         adapter?.invalidateAll()
     }
 
+    private fun wireSearch() {
+        binding.searchClose.setOnClickListener { closeSearch() }
+        binding.searchPrev.setOnClickListener { stepMatch(-1) }
+        binding.searchNext.setOnClickListener { stepMatch(1) }
+        binding.searchInput.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_SEARCH) { runSearch(); true } else false
+        }
+    }
+
+    private fun openSearch() {
+        binding.searchBar.visibility = android.view.View.VISIBLE
+        binding.searchInput.requestFocus()
+        val imm = getSystemService(android.content.Context.INPUT_METHOD_SERVICE)
+                as android.view.inputmethod.InputMethodManager
+        imm.showSoftInput(binding.searchInput, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
+    }
+
+    private fun closeSearch() {
+        binding.searchBar.visibility = android.view.View.GONE
+        binding.searchInput.setText("")
+        matches = emptyList()
+        matchIndex = -1
+        binding.searchCount.text = ""
+        adapter?.setHighlight(-1, null)
+    }
+
+    private fun runSearch() {
+        val f = current ?: return
+        val q = binding.searchInput.text?.toString().orEmpty().trim()
+        if (q.isEmpty()) {
+            matches = emptyList(); matchIndex = -1; binding.searchCount.text = ""
+            adapter?.setHighlight(-1, null)
+            return
+        }
+        runTask(getString(R.string.search_progress), onDone = found@{ list ->
+            if (list == null) return@found
+            matches = list
+            matchIndex = if (list.isEmpty()) -1 else 0
+            updateSearchCount()
+            showMatch()
+        }) {
+            PdfEngine.search(f, q, false)
+        }
+    }
+
+    private fun stepMatch(delta: Int) {
+        if (matches.isEmpty()) return
+        matchIndex = ((matchIndex + delta) % matches.size + matches.size) % matches.size
+        updateSearchCount()
+        showMatch()
+    }
+
+    private fun updateSearchCount() {
+        binding.searchCount.text = if (matches.isEmpty()) getString(R.string.search_none)
+        else getString(R.string.search_count, matchIndex + 1, matches.size)
+    }
+
+    private fun showMatch() {
+        val m = matches.getOrNull(matchIndex) ?: run { adapter?.setHighlight(-1, null); return }
+        val size = sizes.getOrNull(m.page - 1)
+        if (size == null || size[0] <= 0f || size[1] <= 0f) return
+        val norm = RectF(
+            m.x / size[0], m.y / size[1],
+            (m.x + m.w) / size[0], (m.y + m.h) / size[1]
+        )
+        adapter?.setHighlight(m.page - 1, norm)
+        if (binding.pager.currentItem != m.page - 1) binding.pager.setCurrentItem(m.page - 1, true)
+    }
+
     private fun updateIndicator(position: Int, count: Int) {
         binding.pageIndicator.text = "${position + 1} / $count"
     }
@@ -94,6 +172,9 @@ class ViewerActivity : PdfActivity() {
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menu.add(0, 1, 0, R.string.action_rotate)
             .setIcon(R.drawable.ic_rotate)
+            .setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
+        menu.add(0, 3, 0, R.string.action_search)
+            .setIcon(R.drawable.ic_search)
             .setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
         menu.add(0, 2, 1, R.string.action_share)
             .setIcon(R.drawable.ic_share)
@@ -104,6 +185,7 @@ class ViewerActivity : PdfActivity() {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             1 -> { rotate(); return true }
+            3 -> { openSearch(); return true }
             2 -> { current?.let { Files.share(this, it, "application/pdf") }; return true }
         }
         return super.onOptionsItemSelected(item)

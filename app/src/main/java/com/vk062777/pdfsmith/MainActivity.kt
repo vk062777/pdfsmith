@@ -97,6 +97,8 @@ class MainActivity : AppCompatActivity() {
             Action.CREATE_PDF -> Intent(this, CreatePdfActivity::class.java)
             Action.CROP -> Intent(this, CropActivity::class.java)
             Action.OCR -> Intent(this, OcrActivity::class.java)
+            Action.LINKS -> Intent(this, LinksActivity::class.java)
+            Action.IMAGE_OCR -> Intent(this, ImageOcrActivity::class.java)
             else -> Intent(this, ToolsActivity::class.java)
                 .putExtra(ToolsActivity.EXTRA_TOOL, action.name)
         }
@@ -116,6 +118,7 @@ class MainActivity : AppCompatActivity() {
 
         add(HomeRow.Header(R.string.section_organize))
         add(HomeRow.Tool(ToolItem(R.string.tool_pages, R.string.tool_pages_desc, R.drawable.ic_pages, Action.PAGES)))
+        add(HomeRow.Tool(ToolItem(R.string.tool_links, R.string.tool_links_desc, R.drawable.ic_link, Action.LINKS)))
         add(HomeRow.Tool(ToolItem(R.string.tool_merge, R.string.tool_merge_desc, R.drawable.ic_merge, Action.MERGE)))
         add(HomeRow.Tool(ToolItem(R.string.tool_split, R.string.tool_split_desc, R.drawable.ic_split, Action.SPLIT)))
         add(HomeRow.Tool(ToolItem(R.string.tool_watermark, R.string.tool_watermark_desc, R.drawable.ic_watermark, Action.WATERMARK)))
@@ -132,5 +135,6 @@ class MainActivity : AppCompatActivity() {
         add(HomeRow.Tool(ToolItem(R.string.tool_extract, R.string.tool_extract_desc, R.drawable.ic_extract, Action.EXTRACT)))
         add(HomeRow.Tool(ToolItem(R.string.tool_pagenum, R.string.tool_pagenum_desc, R.drawable.ic_pagenum, Action.PAGENUM)))
         add(HomeRow.Tool(ToolItem(R.string.tool_ocr, R.string.tool_ocr_desc, R.drawable.ic_ocr, Action.OCR)))
+        add(HomeRow.Tool(ToolItem(R.string.tool_image_ocr, R.string.tool_image_ocr_desc, R.drawable.ic_image_pdf, Action.IMAGE_OCR)))
     }
 }

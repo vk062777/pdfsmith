@@ -154,6 +154,40 @@ rendering the output and measuring pixels, not by trusting the code:
 This runs automatically in CI on every build, alongside the 80 engine checks, the
 hostile-input suite, the rendered rotation/crop checks and the AES-256 check.
 
+
+## What's new in 1.7.0 — search, hyperlinks, image OCR, clearer signatures
+
+- **Search inside a PDF.** The reader now has a search bar: type a word or phrase,
+  get a count, and step through every hit with previous / next. The current match
+  is highlighted right on the page. Matches come from the real glyph positions, so
+  the highlight lands exactly on the text.
+- **Hyperlinks.** A new tool finds every web and e-mail address written in a PDF
+  and turns it into a real, clickable link — or lets you drag an area and attach
+  your own address.
+- **Image to searchable PDF.** Point it at photos or screenshots; it reads the text
+  on-device and saves a PDF that can be searched and copied. The recognised text is
+  also shown on screen.
+- **Sharper OCR.** The scanned-PDF OCR now renders pages at 2600 px wide instead of
+  1600, which is meaningfully more accurate on small print.
+- **Professional signature result.** The verification popup is now a proper panel:
+  a large green "Signature valid" or red "Signature invalid" heading, followed by
+  aligned Signer / Date / Reason / Location / Certificate / Status rows.
+
+### Verification added in this release
+
+- **Search** — every hit is checked against the rendered page: it must sit on real
+  ink (33-39% coverage) while the same box moved into a blank area has 0%. Checked
+  on rotated pages too.
+- **Hyperlinks** — each added annotation must carry the right URI *and* cover the
+  text it came from, confirmed with an independent reader.
+- **Text layer, two resolutions** — the invisible text layer is now verified at two
+  different raster sizes (100 and 200 dpi) to prove placement does not depend on
+  the resolution the recogniser ran at. All four page rotations pass at both.
+
+All of this runs in CI on every build, alongside the 80 engine checks, the
+hostile-input suite, the rendered rotation/crop checks, the AES-256 check and the
+permission guard.
+
 ## Features
 
 | Tool | What it does |

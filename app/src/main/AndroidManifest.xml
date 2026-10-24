@@ -54,6 +54,16 @@
         <activity android:name=".ToolsActivity" android:exported="false"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode" />
         <activity
+            android:name=".LinksActivity"
+            android:exported="false"
+            android:label="@string/tool_links"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode" />
+        <activity
+            android:name=".ImageOcrActivity"
+            android:exported="false"
+            android:label="@string/tool_image_ocr"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode" />
+        <activity
             android:name=".OcrActivity"
             android:exported="false"
             android:label="@string/tool_ocr"

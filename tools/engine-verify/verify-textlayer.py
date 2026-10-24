@@ -10,7 +10,7 @@ import numpy as np
 import pymupdf
 
 W = "/tmp/pdfsmith-engine-test"   # same dir the JVM uses
-DPI = 110
+DPI = int(os.environ.get("TL_DPI", "110"))
 K = DPI / 72.0
 PW, PH = 595.0, 842.0
 

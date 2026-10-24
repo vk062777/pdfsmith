@@ -164,7 +164,10 @@ class OcrActivity : PdfActivity() {
     }
 
     private companion object {
-        /** Render width handed to the recogniser: sharp enough, still light on memory. */
-        const val OCR_WIDTH = 1600
+        /**
+         * Render width handed to the recogniser. Higher is meaningfully more accurate
+         * on small print, so pages are rendered well above screen size.
+         */
+        const val OCR_WIDTH = 2600
     }
 }

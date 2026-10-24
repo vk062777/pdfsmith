@@ -1001,6 +1001,256 @@ public final class PdfEngine {
         }
     }
 
+    // ------------------------------------------------------------------
+    // Text search and hyperlinks
+    // ------------------------------------------------------------------
+
+    /** A text match, located on the page in DISPLAY points (origin top-left, y down),
+     *  i.e. the same frame the page is rendered in. */
+    public static final class Match {
+        public final int page;          // 1-based
+        public final float x, y, w, h;
+        public final String context;
+
+        public Match(int page, float x, float y, float w, float h, String context) {
+            this.page = page; this.x = x; this.y = y; this.w = w; this.h = h;
+            this.context = context;
+        }
+    }
+
+    /** A detected or added hyperlink. */
+    public static final class FoundLink {
+        public final int page;
+        public final float x, y, w, h;   // display points
+        public final String url;
+
+        public FoundLink(int page, float x, float y, float w, float h, String url) {
+            this.page = page; this.x = x; this.y = y; this.w = w; this.h = h;
+            this.url = url;
+        }
+    }
+
+    /** Walks the page text and keeps every glyph together with its position. */
+    private static final class PositionedText extends com.tom_roush.pdfbox.text.PDFTextStripper {
+        final List<String> chars = new ArrayList<>();
+        final List<com.tom_roush.pdfbox.text.TextPosition> pos = new ArrayList<>();
+
+        PositionedText() throws java.io.IOException {
+            super();
+            setSortByPosition(true);
+        }
+
+        @Override
+        protected void writeString(String text,
+                                   List<com.tom_roush.pdfbox.text.TextPosition> tps) {
+            if (tps == null) return;
+            for (com.tom_roush.pdfbox.text.TextPosition tp : tps) {
+                String u = tp.getUnicode();
+                if (u == null || u.isEmpty()) continue;
+                chars.add(u);
+                pos.add(tp);
+            }
+            chars.add(" ");
+            pos.add(null);          // marks a word break
+        }
+
+        String text() {
+            StringBuilder b = new StringBuilder(chars.size());
+            for (String c : chars) b.append(c);
+            return b.toString();
+        }
+    }
+
+    private static PositionedText positionedText(PDDocument d, int page1) throws Exception {
+        PositionedText pt = new PositionedText();
+        pt.setStartPage(page1);
+        pt.setEndPage(page1);
+        pt.setSortByPosition(true);
+        pt.getText(d);
+        return pt;
+    }
+
+    /** Union of the glyph boxes in [from, to) as (x, yTop, w, h) in display points. */
+    private static float[] boxOf(PositionedText pt, int from, int to) {
+        float minX = Float.MAX_VALUE, minY = Float.MAX_VALUE;
+        float maxX = -Float.MAX_VALUE, maxY = -Float.MAX_VALUE;
+        int seen = 0;
+        for (int k = from; k < to && k < pt.pos.size(); k++) {
+            com.tom_roush.pdfbox.text.TextPosition tp = pt.pos.get(k);
+            if (tp == null) continue;
+            float x = tp.getXDirAdj();
+            float h = tp.getHeightDir();
+            // getYDirAdj() is the baseline; the ink sits above it
+            float yTop = tp.getYDirAdj() - h;
+            minX = Math.min(minX, x);
+            minY = Math.min(minY, yTop);
+            maxX = Math.max(maxX, x + tp.getWidthDirAdj());
+            maxY = Math.max(maxY, yTop + h);
+            seen++;
+        }
+        if (seen == 0) return null;
+        return new float[]{minX, minY, maxX - minX, maxY - minY};
+    }
+
+    /** PDFTextStripper reports unrotated page coordinates; the UI works in the
+     *  displayed frame, so convert. Both are y-down. */
+    private static float[] unrotatedToDisplay(float w, float h, int r,
+                                              float x, float y, float bw, float bh) {
+        switch (r) {
+            case 90:  return new float[]{h - y - bh, x, bh, bw};
+            case 180: return new float[]{w - x - bw, h - y - bh, bw, bh};
+            case 270: return new float[]{y, w - x - bw, bh, bw};
+            default:  return new float[]{x, y, bw, bh};
+        }
+    }
+
+    /** Find every occurrence of [query]. Empty query returns nothing. */
+    public static List<Match> search(File src, String query, boolean matchCase) throws Exception {
+        List<Match> out = new ArrayList<>();
+        if (query == null || query.trim().isEmpty()) return out;
+        try (PDDocument d = open(src)) {
+            String needle = matchCase ? query : query.toLowerCase();
+            for (int p = 1; p <= d.getNumberOfPages(); p++) {
+                PDPage page = d.getPage(p - 1);
+                PDRectangle cb = page.getCropBox();
+                float cropW = cb.getWidth(), cropH = cb.getHeight();
+                int rot = ((page.getRotation() % 360) + 360) % 360;
+                PositionedText pt;
+                try { pt = positionedText(d, p); } catch (Exception e) { continue; }
+                String text = pt.text();
+                String hay = matchCase ? text : text.toLowerCase();
+                int from = 0;
+                while (true) {
+                    int i = hay.indexOf(needle, from);
+                    if (i < 0) break;
+                    float[] b = boxOf(pt, i, i + needle.length());
+                    if (b != null) {
+                        float[] db = unrotatedToDisplay(cropW, cropH, rot, b[0], b[1], b[2], b[3]);
+                        int cs = Math.max(0, i - 28);
+                        int ce = Math.min(text.length(), i + needle.length() + 28);
+                        out.add(new Match(p, db[0], db[1], db[2], db[3],
+                                text.substring(cs, ce).replace('\n', ' ').trim()));
+                    }
+                    from = i + Math.max(1, needle.length());
+                }
+            }
+        }
+        return out;
+    }
+
+    /** URL / e-mail shapes worth turning into links. */
+    private static final java.util.regex.Pattern URL_PATTERN = java.util.regex.Pattern.compile(
+            "(https?://[^\\s<>\"')]+|www\\.[^\\s<>\"')]+|"
+            + "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,})");
+
+    /** Every URL / e-mail address found in the document's text, with its position. */
+    public static List<FoundLink> findLinks(File src) throws Exception {
+        List<FoundLink> out = new ArrayList<>();
+        try (PDDocument d = open(src)) {
+            for (int p = 1; p <= d.getNumberOfPages(); p++) {
+                PDPage page = d.getPage(p - 1);
+                PDRectangle cb = page.getCropBox();
+                float cropW = cb.getWidth(), cropH = cb.getHeight();
+                int rot = ((page.getRotation() % 360) + 360) % 360;
+                PositionedText pt;
+                try { pt = positionedText(d, p); } catch (Exception e) { continue; }
+                String text = pt.text();
+                java.util.regex.Matcher m = URL_PATTERN.matcher(text);
+                while (m.find()) {
+                    String raw = m.group();
+                    // trim trailing punctuation that belongs to the sentence
+                    String url = raw.replaceAll("[.,;:!?]+$", "");
+                    if (url.length() < 4) continue;
+                    float[] b = boxOf(pt, m.start(), m.start() + url.length());
+                    if (b != null) {
+                        float[] dd = unrotatedToDisplay(cropW, cropH, rot, b[0], b[1], b[2], b[3]);
+                        out.add(new FoundLink(p, dd[0], dd[1], dd[2], dd[3], url));
+                    }
+                }
+            }
+        }
+        return out;
+    }
+
+    /** Turn a display-frame box into a page rectangle, honouring /Rotate. */
+    private static PDRectangle displayBoxToPage(PDRectangle crop, int r,
+                                                float xd, float yd, float wd, float hd) {
+        float w = crop.getWidth(), h = crop.getHeight();
+        float[][] corners = {{xd, yd}, {xd + wd, yd}, {xd, yd + hd}, {xd + wd, yd + hd}};
+        float minX = Float.MAX_VALUE, minY = Float.MAX_VALUE;
+        float maxX = -Float.MAX_VALUE, maxY = -Float.MAX_VALUE;
+        for (float[] c : corners) {
+            float px, py;
+            switch (r) {
+                case 90:  px = c[1];      py = c[0];      break;
+                case 180: px = w - c[0];  py = c[1];      break;
+                case 270: px = w - c[1];  py = h - c[0];  break;
+                default:  px = c[0];      py = h - c[1];  break;
+            }
+            minX = Math.min(minX, px); maxX = Math.max(maxX, px);
+            minY = Math.min(minY, py); maxY = Math.max(maxY, py);
+        }
+        return new PDRectangle(minX, minY, maxX - minX, maxY - minY);
+    }
+
+    /** Attach real link annotations for the given links. Returns how many were added. */
+    public static int addLinks(File src, List<FoundLink> links, File out) throws Exception {
+        int added = 0;
+        try (PDDocument d = open(src)) {
+            int total = d.getNumberOfPages();
+            for (FoundLink l : links) {
+                if (l == null || l.page < 1 || l.page > total) continue;
+                String url = normaliseUrl(l.url);
+                if (url == null) continue;
+                PDPage page = d.getPage(l.page - 1);
+                PDRectangle crop = page.getCropBox();
+                int r = ((page.getRotation() % 360) + 360) % 360;
+                PDRectangle rect = displayBoxToPage(crop, r, l.x, l.y, l.w, l.h);
+                // a link needs a little padding to be comfortably tappable
+                rect.setLowerLeftX(rect.getLowerLeftX() - 1f);
+                rect.setLowerLeftY(rect.getLowerLeftY() - 1f);
+                rect.setUpperRightX(rect.getUpperRightX() + 1f);
+                rect.setUpperRightY(rect.getUpperRightY() + 1f);
+
+                com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationLink link =
+                        new com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationLink();
+                link.setRectangle(rect);
+                link.setBorderStyle(new com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDBorderStyleDictionary());
+                link.getBorderStyle().setWidth(0f);
+                com.tom_roush.pdfbox.pdmodel.interactive.action.PDActionURI action =
+                        new com.tom_roush.pdfbox.pdmodel.interactive.action.PDActionURI();
+                action.setURI(url);
+                link.setAction(action);
+                page.getAnnotations().add(link);
+                added++;
+            }
+            d.save(out);
+        }
+        return added;
+    }
+
+    /** Add a single link over a rectangle given in display points. */
+    public static void addLink(File src, int page1, float xd, float yd, float wd, float hd,
+                               String url, File out) throws Exception {
+        String u = normaliseUrl(url);
+        if (u == null) throw new IllegalArgumentException("Not a valid link");
+        FoundLink l = new FoundLink(page1, xd, yd, wd, hd, u);
+        addLinks(src, java.util.Collections.singletonList(l), out);
+    }
+
+    /** "example.com" -> "https://example.com"; mail addresses become mailto:. */
+    public static String normaliseUrl(String raw) {
+        if (raw == null) return null;
+        String s = raw.trim();
+        if (s.isEmpty()) return null;
+        String lower = s.toLowerCase();
+        if (lower.startsWith("http://") || lower.startsWith("https://")) return s;
+        if (s.contains("@") && !s.contains(" ")) return "mailto:" + s;
+        if (lower.startsWith("www.")) return "https://" + s;
+        if (lower.matches("[a-z0-9.-]+\\.[a-z]{2,}(/.*)?")) return "https://" + s;
+        return null;
+    }
+
     /** One page of a document built from scratch. */
     @SuppressWarnings("unused")
     public static final class PageSpec {

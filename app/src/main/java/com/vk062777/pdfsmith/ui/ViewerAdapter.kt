@@ -1,6 +1,7 @@
 package com.vk062777.pdfsmith.ui
 
 import android.graphics.Bitmap
+import android.graphics.RectF
 import android.util.LruCache
 import android.view.LayoutInflater
 import android.view.ViewGroup
@@ -32,6 +33,7 @@ class ViewerAdapter(
     private val renderedWidth = HashMap<Int, Int>()
     private val inFlight = HashSet<Int>()
     private val holders = HashMap<Int, VH>()
+    private val highlights = HashMap<Int, RectF>()
 
     class VH(val b: ItemPageBinding) : RecyclerView.ViewHolder(b.root) {
         var boundPosition = -1
@@ -44,6 +46,8 @@ class ViewerAdapter(
 
     override fun onBindViewHolder(holder: VH, position: Int) {
         val iv = holder.b.pageImage
+        holder.b.highlight.imageView = iv
+        holder.b.highlight.norm = highlights[position]
         iv.onZoomChanged = onZoom
         iv.onZoomSettled = { z -> onZoomSettled(position, z) }
         val samePage = holder.boundPosition == position
@@ -70,6 +74,7 @@ class ViewerAdapter(
 
     override fun onViewRecycled(holder: VH) {
         if (holder.boundPosition >= 0) holders.remove(holder.boundPosition)
+        holder.b.highlight.norm = null
         holder.boundPosition = -1
         holder.b.pageImage.setImageBitmap(null)
     }
@@ -89,6 +94,19 @@ class ViewerAdapter(
                     h.b.pageImage.setImageBitmapPreservingTransform(bmp)
                 }
             }
+        }
+    }
+
+    /** Show (or clear) the search highlight for one page. */
+    fun setHighlight(position: Int, norm: RectF?) {
+        if (position < 0) {
+            highlights.clear()
+            holders.values.forEach { it.b.highlight.norm = null }
+            return
+        }
+        if (norm == null) highlights.remove(position) else highlights.put(position, norm)
+        holders[position]?.let {
+            if (it.boundPosition == position) it.b.highlight.norm = norm
         }
     }
 

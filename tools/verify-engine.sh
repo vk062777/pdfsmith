@@ -28,7 +28,7 @@ echo "== running engine verification =="
 java -cp "$CP" TestEngine
 
 echo "== rotation / overlay placement (rendered and pixel-checked) =="
-javac -cp "$CP" -d out TestRotate.java TestCrop.java TestEnc.java TestHostile.java TestTextLayer.java
+javac -cp "$CP" -d out TestRotate.java TestCrop.java TestEnc.java TestHostile.java TestTextLayer.java TestSearch.java
 java -cp "$CP" TestRotate
 java -cp "$CP" TestCrop
 java -cp "$CP" TestEnc
@@ -37,8 +37,16 @@ java -cp "$CP" TestHostile
 echo "== OCR text layer (rendered and pixel-checked, all 4 rotations) =="
 python3 -m pip install --quiet pymupdf >/dev/null 2>&1 || true
 java -cp "$CP" TestTextLayer make
-python3 verify-textlayer.py measure
-java -cp "$CP" TestTextLayer apply
-python3 verify-textlayer.py check
+# the text layer must be correct whatever resolution the recogniser ran at
+for dpi in 100 200; do
+  echo "  -- raster at ${dpi} dpi --"
+  TL_DPI=$dpi python3 verify-textlayer.py measure
+  java -cp "$CP" TestTextLayer apply
+  TL_DPI=$dpi python3 verify-textlayer.py check || exit 1
+done
+
+echo "== text search + hyperlinks (rendered and pixel-checked) =="
+java -cp "$CP" TestSearch
+python3 verify-search.py
 python3 -m pip install --quiet pymupdf >/dev/null 2>&1 || true
 python3 verify-render.py
