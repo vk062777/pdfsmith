@@ -13,6 +13,12 @@ android {
         targetSdk 34
         versionCode 7
         versionName "1.6.0"
+
+        ndk {
+            // Real phones are ARM. The x86/x86_64 slices only exist for emulators
+            // and would add ~22 MB to the download.
+            abiFilters 'arm64-v8a', 'armeabi-v7a'
+        }
         vectorDrawables { useSupportLibrary true }
     }
 
