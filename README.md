@@ -119,6 +119,41 @@ above; the rest was already safe.
 A new hostile-input test suite runs in CI alongside the 80 engine checks, the
 rendered rotation/crop checks and the AES-256 check.
 
+
+## What's new in 1.6.0 — on-device OCR: make scanned PDFs searchable
+
+Scanned PDFs are just pictures — you cannot search them or copy text out. This
+release adds a **Make searchable (OCR)** tool that reads each page on your phone
+and writes the text back invisibly.
+
+- **Runs entirely on-device.** The recogniser is ML Kit's bundled Latin model:
+  it ships inside the APK, so it works offline, needs no Google Play Services,
+  and **adds no permissions** — the app still requests nothing at all.
+- **The page does not change.** The recognised text is written in PDF rendering
+  mode 3 ("neither fill nor stroke"), so the page renders pixel-for-pixel
+  identically. You get search and copy without any visual difference.
+- Pick all pages or a range, with live "reading page 3 of 12" progress.
+
+### How it was verified
+
+The text layer is the part that could silently be wrong, so it was checked by
+rendering the output and measuring pixels, not by trusting the code:
+
+- **Placement** — the recognised text was compared against the actual ink. The
+  placed run matches the ink's width to within ~2%, and the font size comes out
+  as 22.03pt for 22pt source text and 14.05pt for 14pt.
+- **On the ink** — for every page, the text sits over real ink (11-17% coverage)
+  while the same box shifted away from the text has 0%.
+- **All four rotations** — 0, 90, 180 and 270 degrees all pass, so a scanned page
+  that is stored sideways still gets its text in the right place.
+- **Invisible** — rendering mode 3 confirmed in the content stream, and the page
+  renders with zero differing bytes against the original.
+- **Searchable** — words are extracted correctly by an independent reader
+  (PyMuPDF), and the surrounding content is untouched.
+
+This runs automatically in CI on every build, alongside the 80 engine checks, the
+hostile-input suite, the rendered rotation/crop checks and the AES-256 check.
+
 ## Features
 
 | Tool | What it does |

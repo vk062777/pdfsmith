@@ -7,7 +7,7 @@ try:
 except ImportError:
     import fitz as pymupdf
 
-base = os.path.join(tempfile.gettempdir(), "pdfsmith-engine-test")
+base = "/tmp/pdfsmith-engine-test"
 ok = True
 for deg in (90, 180, 270):
     path = os.path.join(base, f"stamped{deg}.pdf")

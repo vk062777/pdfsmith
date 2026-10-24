@@ -96,6 +96,7 @@ class MainActivity : AppCompatActivity() {
             Action.IMAGES_PDF -> Intent(this, ImagesToPdfActivity::class.java)
             Action.CREATE_PDF -> Intent(this, CreatePdfActivity::class.java)
             Action.CROP -> Intent(this, CropActivity::class.java)
+            Action.OCR -> Intent(this, OcrActivity::class.java)
             else -> Intent(this, ToolsActivity::class.java)
                 .putExtra(ToolsActivity.EXTRA_TOOL, action.name)
         }
@@ -130,5 +131,6 @@ class MainActivity : AppCompatActivity() {
         add(HomeRow.Tool(ToolItem(R.string.tool_metadata, R.string.tool_metadata_desc, R.drawable.ic_metadata, Action.METADATA)))
         add(HomeRow.Tool(ToolItem(R.string.tool_extract, R.string.tool_extract_desc, R.drawable.ic_extract, Action.EXTRACT)))
         add(HomeRow.Tool(ToolItem(R.string.tool_pagenum, R.string.tool_pagenum_desc, R.drawable.ic_pagenum, Action.PAGENUM)))
+        add(HomeRow.Tool(ToolItem(R.string.tool_ocr, R.string.tool_ocr_desc, R.drawable.ic_ocr, Action.OCR)))
     }
 }

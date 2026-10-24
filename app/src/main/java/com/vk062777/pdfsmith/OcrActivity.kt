@@ -1,0 +1,170 @@
+package com.vk062777.pdfsmith
+
+import android.graphics.Bitmap
+import android.graphics.pdf.PdfRenderer
+import android.net.Uri
+import android.os.Bundle
+import android.os.ParcelFileDescriptor
+import androidx.lifecycle.lifecycleScope
+import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.text.TextRecognition
+import com.google.mlkit.vision.text.TextRecognizer
+import com.google.mlkit.vision.text.latin.TextRecognizerOptions
+import com.vk062777.pdfsmith.databinding.ActivityOcrBinding
+import com.vk062777.pdfsmith.engine.PdfEngine
+import com.vk062777.pdfsmith.ui.PageRenderer
+import com.vk062777.pdfsmith.util.Files
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCoroutine
+import kotlinx.coroutines.withContext
+import java.io.File
+import kotlin.coroutines.resume
+
+/**
+ * Makes a scanned PDF searchable. Every page is rendered and read by ML Kit's
+ * on-device text recogniser (bundled model: offline, no Play Services, no extra
+ * permission), and the recognised words are written back as an invisible text
+ * layer. The page itself is not changed at all.
+ */
+class OcrActivity : PdfActivity() {
+
+    private lateinit var binding: ActivityOcrBinding
+    private var renderer: PageRenderer? = null
+    private var pfd: ParcelFileDescriptor? = null
+    private var source: File? = null
+    private var sourceName: String = "document.pdf"
+    private var pageCount = 0
+
+    private val recogniser: TextRecognizer by lazy {
+        TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        binding = ActivityOcrBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+        setSupportActionBar(binding.toolbar)
+        binding.toolbar.setNavigationOnClickListener { finish() }
+        binding.btnChoose.setOnClickListener { pickPdf() }
+        binding.btnRun.setOnClickListener { run() }
+        pickPdf()
+    }
+
+    override fun onPdfChosen(uri: Uri) {
+        sourceName = Files.displayName(this, uri)
+        openPdf(uri) { f ->
+            binding.fileName.text = sourceName
+            runTask(getString(R.string.msg_processing), onDone = opened@{ count ->
+                if (count == null || count == 0) return@opened
+                pageCount = count
+                binding.info.text = getString(R.string.label_pages, count)
+                binding.btnRun.isEnabled = true
+            }) {
+                source = f
+                val d = ParcelFileDescriptor.open(f, ParcelFileDescriptor.MODE_READ_ONLY)
+                try { pfd?.close() } catch (_: Exception) { }
+                pfd = d
+                val r = PdfRenderer(d)
+                renderer = PageRenderer(r)
+                r.pageCount
+            }
+        }
+    }
+
+    private fun run() {
+        val src = source ?: return toast(getString(R.string.msg_pick_file_first))
+        val r = renderer ?: return
+        val pages = parsePages(binding.pagesInput.text?.toString().orEmpty())
+        if (pages.isEmpty()) return toast(getString(R.string.msg_invalid_ranges))
+
+        lifecycleScope.launch {
+            busy.show(getString(R.string.ocr_working, 1, pages.size))
+            val found = ArrayList<PdfEngine.PageText>()
+            for ((i, page) in pages.withIndex()) {
+                busy.update(getString(R.string.ocr_working, i + 1, pages.size))
+                val bmp = withContext(Dispatchers.IO) {
+                    runCatching { r.render(page - 1, OCR_WIDTH) }.getOrNull()
+                } ?: continue
+                val w = bmp.width
+                val h = bmp.height
+                val words = recognise(bmp)
+                bmp.recycle()
+                if (words.isNotEmpty()) found.add(PdfEngine.PageText(page, w, h, words))
+            }
+            busy.dismiss()
+            if (found.isEmpty()) {
+                toast(getString(R.string.ocr_none))
+                return@launch
+            }
+            val n = found.size
+            runAndSave(Files.suggestName(sourceName, "_searchable")) { out ->
+                PdfEngine.addTextLayer(src, found, out)
+                n
+            }
+        }
+    }
+
+    /** "1-3, 5" -> [1,2,3,5]; blank means every page. Clamped to the real page count. */
+    private fun parsePages(s: String): List<Int> {
+        val out = ArrayList<Int>()
+        s.split(',').forEach { part ->
+            val p = part.trim()
+            if (p.isEmpty()) return@forEach
+            if (p.contains('-')) {
+                val a = p.split('-')
+                val f = a.getOrNull(0)?.trim()?.toIntOrNull()
+                val t = a.getOrNull(1)?.trim()?.toIntOrNull()
+                if (f != null && t != null && f >= 1 && t >= f) {
+                    out.addAll(f..minOf(t, maxOf(1, pageCount)))
+                }
+            } else {
+                p.toIntOrNull()?.let { if (it in 1..pageCount) out.add(it) }
+            }
+        }
+        val cleaned = out.distinct().sorted()
+        return if (cleaned.isEmpty()) (1..pageCount).toList() else cleaned
+    }
+
+    private suspend fun recognise(bitmap: Bitmap): List<PdfEngine.OcrWord> =
+        suspendCoroutine { cont ->
+            recogniser.process(InputImage.fromBitmap(bitmap, 0))
+                .addOnSuccessListener { result ->
+                    val words = ArrayList<PdfEngine.OcrWord>()
+                    for (block in result.textBlocks) {
+                        for (line in block.lines) {
+                            for (el in line.elements) {
+                                val b = el.boundingBox ?: continue
+                                val t = el.text
+                                if (t.isBlank() || b.width() <= 0 || b.height() <= 0) continue
+                                words.add(
+                                    PdfEngine.OcrWord(
+                                        t,
+                                        b.left.toFloat(), b.top.toFloat(),
+                                        b.width().toFloat(), b.height().toFloat()
+                                    )
+                                )
+                            }
+                        }
+                    }
+                    cont.resume(words)
+                }
+                .addOnFailureListener { cont.resume(emptyList()) }
+        }
+
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        try { recogniser.close() } catch (_: Exception) { }
+        renderer?.close()
+        try { pfd?.close() } catch (_: Exception) { }
+    }
+
+    private companion object {
+        /** Render width handed to the recogniser: sharp enough, still light on memory. */
+        const val OCR_WIDTH = 1600
+    }
+}

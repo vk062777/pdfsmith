@@ -906,6 +906,101 @@ public final class PdfEngine {
         }
     }
 
+    // ------------------------------------------------------------------
+    // OCR text layer
+    // ------------------------------------------------------------------
+
+    /** One recognised word, in the pixel coordinates of the raster the OCR ran on
+     *  (origin at the top-left). */
+    public static final class OcrWord {
+        public final String text;
+        public final float x, y, w, h;
+
+        public OcrWord(String text, float x, float y, float w, float h) {
+            this.text = text;
+            this.x = x; this.y = y; this.w = w; this.h = h;
+        }
+    }
+
+    /** Everything recognised on one page. */
+    public static final class PageText {
+        public final int page;      // 1-based
+        public final int imgW, imgH;
+        public final List<OcrWord> words;
+
+        public PageText(int page, int imgW, int imgH, List<OcrWord> words) {
+            this.page = page; this.imgW = imgW; this.imgH = imgH; this.words = words;
+        }
+    }
+
+    /** Where the text baseline sits inside a word box (fraction from the top). */
+    private static final float BASELINE_FRACTION = 0.82f;
+    /** Glyph size relative to the box height. */
+    private static final float FONT_HEIGHT_FRACTION = 0.92f;
+
+    /**
+     * Add an invisible, selectable text layer built from OCR results, so a scanned
+     * PDF becomes searchable and its text can be copied. The page looks identical:
+     * the glyphs are drawn in rendering mode 3 ("neither fill nor stroke").
+     */
+    public static void addTextLayer(File src, List<PageText> pages, File out) throws Exception {
+        try (PDDocument d = open(src)) {
+            int total = d.getNumberOfPages();
+            for (PageText pt : pages) {
+                if (pt == null || pt.page < 1 || pt.page > total) continue;
+                if (pt.words.isEmpty() || pt.imgW <= 0 || pt.imgH <= 0) continue;
+                PDPage page = d.getPage(pt.page - 1);
+                PDRectangle box = page.getCropBox();
+                float w = box.getWidth(), h = box.getHeight();
+                int r = ((page.getRotation() % 360) + 360) % 360;
+                // Displayed page size (the raster was produced in the displayed frame).
+                float dw = (r == 90 || r == 270) ? h : w;
+                float dh = (r == 90 || r == 270) ? w : h;
+
+                try (PDPageContentStream cs =
+                             new PDPageContentStream(d, page, AppendMode.APPEND, true, true)) {
+                    cs.setRenderingMode(com.tom_roush.pdfbox.pdmodel.graphics.state.RenderingMode.NEITHER);
+                    cs.beginText();
+                    for (OcrWord word : pt.words) {
+                        String txt = winAnsi(word.text);
+                        if (txt == null || txt.trim().isEmpty()) continue;
+                        float xd = word.x / pt.imgW * dw;
+                        float yd = (word.y + word.h * BASELINE_FRACTION) / pt.imgH * dh;
+                        float hd = word.h / pt.imgH * dh;
+                        float targetW = word.w / pt.imgW * dw;
+                        // Derive the size from the box WIDTH so the placed run matches the
+                        // ink width (that is what selection and highlighting follow). Fall
+                        // back to the box height, and keep the result sane.
+                        float emWidth = PDType1Font.HELVETICA.getStringWidth(txt) / 1000f;
+                        float byHeight = hd * FONT_HEIGHT_FRACTION;
+                        float size;
+                        if (emWidth > 0.02f && targetW > 0.5f) {
+                            size = targetW / emWidth;
+                            size = Math.max(byHeight * 0.5f, Math.min(byHeight * 1.6f, size));
+                        } else {
+                            size = byHeight;
+                        }
+                        size = Math.max(1f, size);
+                        // displayed point -> page point (same mapping the cropper uses)
+                        float px, py;
+                        switch (r) {
+                            case 90:  px = yd;      py = xd;      break;
+                            case 180: px = w - xd;  py = yd;      break;
+                            case 270: px = w - yd;  py = h - xd;  break;
+                            default:  px = xd;      py = h - yd;  break;
+                        }
+                        cs.setFont(PDType1Font.HELVETICA, size);
+                        // rotate the run so it reads upright once the page /Rotate is applied
+                        cs.setTextMatrix(Matrix.getRotateInstance(Math.toRadians(r), px, py));
+                        cs.showText(txt);
+                    }
+                    cs.endText();
+                }
+            }
+            d.save(out);
+        }
+    }
+
     /** One page of a document built from scratch. */
     @SuppressWarnings("unused")
     public static final class PageSpec {

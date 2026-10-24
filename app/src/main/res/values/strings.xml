@@ -198,4 +198,13 @@
     <string name="crop_hint">Drag the corners to choose the area to keep.</string>
         <string name="msg_crop_too_small">The crop area is too small</string>
     <string name="msg_not_a_pdf">This file is not a PDF</string>
+    <string name="tool_ocr">Make searchable (OCR)</string>
+    <string name="tool_ocr_desc">Add invisible text to a scanned PDF so it can be searched and copied</string>
+    <string name="ocr_intro">Runs entirely on your phone, offline. The page looks exactly the same \u2014 the recognised text is added invisibly so you can search it and copy it.</string>
+    <string name="hint_ocr_pages">Pages (blank = all, e.g. 1-3, 5)</string>
+    <string name="action_make_searchable">Make searchable</string>
+    <string name="ocr_working">Reading page %1$d of %2$d\u2026</string>
+    <string name="ocr_done">Added searchable text to %1$d page(s)</string>
+    <string name="ocr_none">No text was found on the selected pages</string>
+        <string name="msg_no_file_chosen">No PDF chosen</string>
 </resources>
