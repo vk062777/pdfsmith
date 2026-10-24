@@ -36,7 +36,7 @@ class ImageOcrActivity : PdfActivity() {
         if (recognisedText.isBlank()) return toast(getString(R.string.image_ocr_none))
         val cm = getSystemService(android.content.Context.CLIPBOARD_SERVICE)
                 as android.content.ClipboardManager
-        cm.setPrimaryClip(android.content.ClipData.newPlainText("NovaPDF OCR", recognisedText))
+        cm.setPrimaryClip(android.content.ClipData.newPlainText("KavoPDF OCR", recognisedText))
         toast(getString(R.string.image_ocr_copied))
     }
 

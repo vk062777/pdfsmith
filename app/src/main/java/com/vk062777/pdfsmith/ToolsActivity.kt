@@ -72,6 +72,8 @@ class ToolsActivity : PdfActivity() {
     private var fColourSpinner: Spinner? = null
     private var fRandom: SwitchMaterial? = null
     private var fLevelSpinner: Spinner? = null
+    private var fOwnerPw: android.widget.EditText? = null
+    private var fPerms: Spinner? = null
     private var fPagenumOpacity: EditText? = null
     private var fSplitAll: SwitchMaterial? = null
     private var fExtractPages: EditText? = null
@@ -164,6 +166,17 @@ class ToolsActivity : PdfActivity() {
         return et
     }
 
+    /** True when a password would fall to a trivial guess. Length matters most. */
+    private fun weakPassword(pw: String): Boolean {
+        if (pw.length >= 12) return false
+        var kinds = 0
+        if (pw.any { it.isLowerCase() }) kinds++
+        if (pw.any { it.isUpperCase() }) kinds++
+        if (pw.any { it.isDigit() }) kinds++
+        if (pw.any { !it.isLetterOrDigit() }) kinds++
+        return pw.length < 9 || kinds < 3
+    }
+
     private fun addSpinner(label: String, options: List<String>, selected: Int = 0): Spinner {
         val box = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -204,6 +217,7 @@ class ToolsActivity : PdfActivity() {
         fCreator = null; fProducer = null; fCreated = null; fModified = null
         fSignName = null; fSignOrg = null; fSignReason = null; fSignLocation = null; fSignContact = null
         fFontSpinner = null; fColourSpinner = null; fRandom = null; fLevelSpinner = null
+        fOwnerPw = null; fPerms = null
         fPagenumOpacity = null; fSplitAll = null; fExtractPages = null
 
         when (tool) {
@@ -224,6 +238,9 @@ class ToolsActivity : PdfActivity() {
             Action.PROTECT -> {
                 fPw = addField(getString(R.string.hint_password), InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD)
                 fPw2 = addField(getString(R.string.hint_password_confirm), InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD)
+                fOwnerPw = addField(getString(R.string.hint_owner_password), InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD)
+                fPerms = addSpinner(getString(R.string.label_permissions),
+                        resources.getStringArray(R.array.perm_choices).toList(), 2)
             }
             Action.UNLOCK -> {
                 fPw = addField(getString(R.string.hint_password), InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD)
@@ -297,9 +314,19 @@ class ToolsActivity : PdfActivity() {
             Action.PROTECT -> {
                 val p1 = fPw?.text?.toString().orEmpty()
                 val p2 = fPw2?.text?.toString().orEmpty()
+                val owner = fOwnerPw?.text?.toString().orEmpty()
                 if (p1.isEmpty()) return toast(getString(R.string.msg_enter_password))
+                if (p1.length < 6) return toast(getString(R.string.pw_too_short))
                 if (p1 != p2) return toast(getString(R.string.msg_passwords_mismatch))
-                single { PdfEngine.encrypt(it.first, p1, p1, it.second) }
+                if (owner.isNotEmpty() && owner.length < 6) return toast(getString(R.string.pw_too_short))
+                if (weakPassword(p1)) toast(getString(R.string.pw_weak))
+                val perms = when (fPerms?.selectedItemPosition ?: 2) {
+                    0 -> 0
+                    1 -> PdfEngine.PERM_PRINT
+                    2 -> PdfEngine.PERM_PRINT or PdfEngine.PERM_COPY
+                    else -> PdfEngine.PERM_PRINT or PdfEngine.PERM_COPY or PdfEngine.PERM_EDIT
+                }
+                single { PdfEngine.encrypt(it.first, p1, owner, perms, it.second) }
             }
             Action.UNLOCK -> {
                 val p = fPw?.text?.toString().orEmpty()

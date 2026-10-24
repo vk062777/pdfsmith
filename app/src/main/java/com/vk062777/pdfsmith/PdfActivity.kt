@@ -12,6 +12,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.vk062777.pdfsmith.util.Busy
+import com.vk062777.pdfsmith.util.AppLog
 import com.vk062777.pdfsmith.util.Files
 import com.vk062777.pdfsmith.util.ThemeUtil
 import kotlinx.coroutines.Dispatchers
@@ -68,14 +69,21 @@ abstract class PdfActivity : AppCompatActivity() {
             pendingProducer = null
             if (uri == null || producer == null) return@registerForActivityResult
             val out = Files.newFile(this, pendingName)
+            val taskName = javaClass.simpleName
             runTask(getString(R.string.msg_processing), onDone = saved@{ result ->
                 if (result == null) return@saved
                 showSuccess(getString(R.string.msg_saved_to, pendingName), result)
                 onSaved(result)
             }) {
-                producer(out)
-                Files.writeToUri(this, out, uri)
-                out
+                try {
+                    producer(out)
+                    Files.writeToUri(this, out, uri)
+                    AppLog.record(this, taskName, pendingName, true)
+                    out
+                } catch (t: Throwable) {
+                    AppLog.record(this, taskName, (t.message ?: t.javaClass.simpleName), false)
+                    throw t
+                }
             }
         }
 
@@ -111,6 +119,7 @@ abstract class PdfActivity : AppCompatActivity() {
             .setPositiveButton(R.string.action_open, null)
             .setNegativeButton(R.string.action_cancel, null)
             .create()
+        dialog.window?.setBackgroundDrawableResource(R.drawable.bg_dialog_rounded)
         dialog.setOnShowListener {
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                 val pw = input.text?.toString().orEmpty()
@@ -155,6 +164,7 @@ abstract class PdfActivity : AppCompatActivity() {
             .start()
 
         val dialog = AlertDialog.Builder(this).setView(view).setCancelable(true).create()
+        dialog.window?.setBackgroundDrawableResource(R.drawable.bg_dialog_rounded)
 
         val open = view.findViewById<View>(R.id.successOpen)
         val share = view.findViewById<View>(R.id.successShare)
@@ -205,6 +215,8 @@ abstract class PdfActivity : AppCompatActivity() {
     }
 
     protected fun toast(msg: String) = Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
+
+    protected fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
 
     private fun takePersist(uri: Uri) {
         try {

@@ -100,6 +100,8 @@ class MainActivity : AppCompatActivity() {
             Action.LINKS -> Intent(this, LinksActivity::class.java)
             Action.IMAGE_OCR -> Intent(this, ImageOcrActivity::class.java)
             Action.REDACT -> Intent(this, RedactActivity::class.java)
+            Action.BOOKMARKS -> Intent(this, BookmarksActivity::class.java)
+            Action.LOG -> Intent(this, LogActivity::class.java)
             else -> Intent(this, ToolsActivity::class.java)
                 .putExtra(ToolsActivity.EXTRA_TOOL, action.name)
         }
@@ -126,6 +128,8 @@ class MainActivity : AppCompatActivity() {
         add(HomeRow.Tool(ToolItem(R.string.tool_links, R.string.tool_links_desc, R.drawable.ic_link, Action.LINKS)))
         add(HomeRow.Tool(ToolItem(R.string.tool_merge, R.string.tool_merge_desc, R.drawable.ic_merge, Action.MERGE)))
         add(HomeRow.Tool(ToolItem(R.string.tool_split, R.string.tool_split_desc, R.drawable.ic_split, Action.SPLIT)))
+        add(HomeRow.Tool(ToolItem(R.string.tool_bookmarks, R.string.tool_bookmarks_desc, R.drawable.ic_bookmark, Action.BOOKMARKS)))
+        add(HomeRow.Tool(ToolItem(R.string.tool_pagenum, R.string.tool_pagenum_desc, R.drawable.ic_pagenum, Action.PAGENUM)))
 
         add(HomeRow.Header(R.string.section_security))
         add(HomeRow.Tool(ToolItem(R.string.tool_sign, R.string.tool_sign_desc, R.drawable.ic_sign, Action.SIGN)))
@@ -139,8 +143,8 @@ class MainActivity : AppCompatActivity() {
         add(HomeRow.Tool(ToolItem(R.string.tool_compress, R.string.tool_compress_desc, R.drawable.ic_compress, Action.COMPRESS)))
         add(HomeRow.Tool(ToolItem(R.string.tool_metadata, R.string.tool_metadata_desc, R.drawable.ic_metadata, Action.METADATA)))
         add(HomeRow.Tool(ToolItem(R.string.tool_extract, R.string.tool_extract_desc, R.drawable.ic_extract, Action.EXTRACT)))
-        add(HomeRow.Tool(ToolItem(R.string.tool_pagenum, R.string.tool_pagenum_desc, R.drawable.ic_pagenum, Action.PAGENUM)))
         add(HomeRow.Tool(ToolItem(R.string.tool_ocr, R.string.tool_ocr_desc, R.drawable.ic_ocr, Action.OCR)))
         add(HomeRow.Tool(ToolItem(R.string.tool_image_ocr, R.string.tool_image_ocr_desc, R.drawable.ic_image_pdf, Action.IMAGE_OCR)))
+        add(HomeRow.Tool(ToolItem(R.string.tool_log, R.string.tool_log_desc, R.drawable.ic_log, Action.LOG)))
     }
 }

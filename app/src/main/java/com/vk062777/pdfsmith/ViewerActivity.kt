@@ -209,7 +209,7 @@ class ViewerActivity : PdfActivity() {
     private fun copyToClipboard(text: String) {
         val cm = getSystemService(android.content.Context.CLIPBOARD_SERVICE)
                 as android.content.ClipboardManager
-        cm.setPrimaryClip(android.content.ClipData.newPlainText("NovaPDF", text))
+        cm.setPrimaryClip(android.content.ClipData.newPlainText("KavoPDF", text))
         toast(getString(R.string.copied))
     }
 

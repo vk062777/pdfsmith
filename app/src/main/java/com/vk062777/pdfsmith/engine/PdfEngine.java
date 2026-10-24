@@ -15,7 +15,10 @@ import com.tom_roush.pdfbox.pdmodel.PDPageContentStream.AppendMode;
 import com.tom_roush.pdfbox.pdmodel.PDResources;
 import com.tom_roush.pdfbox.pdmodel.common.PDRectangle;
 import com.tom_roush.pdfbox.pdmodel.encryption.AccessPermission;
+import com.tom_roush.pdfbox.pdmodel.interactive.documentnavigation.outline.PDDocumentOutline;
+import com.tom_roush.pdfbox.pdmodel.interactive.documentnavigation.outline.PDOutlineItem;
 import com.tom_roush.pdfbox.pdmodel.encryption.StandardProtectionPolicy;
+import com.tom_roush.pdfbox.pdmodel.font.PDFont;
 import com.tom_roush.pdfbox.pdmodel.font.PDType1Font;
 import com.tom_roush.pdfbox.pdmodel.graphics.PDXObject;
 import com.tom_roush.pdfbox.pdmodel.graphics.form.PDFormXObject;
@@ -46,7 +49,7 @@ import java.util.Random;
 import java.util.Set;
 
 /**
- * NovaPDF — the offline document-processing core.
+ * KavoPDF — the offline document-processing core.
  *
  * <p>Every method is a pure file-in / file-out operation built on the Apache PDFBox
  * port for Android. No UI, no network: the whole engine is offline and deterministic,
@@ -590,22 +593,43 @@ public final class PdfEngine {
     // Security
     // ---------------------------------------------------------------------
 
+    /** What the reader is allowed to do with a protected document. */
+    public static final int PERM_PRINT = 1;
+    public static final int PERM_COPY = 2;
+    public static final int PERM_EDIT = 4;
+
     public static void encrypt(File src, String userPassword, String ownerPassword, File out) throws Exception {
+        encrypt(src, userPassword, ownerPassword, PERM_PRINT | PERM_COPY, out);
+    }
+
+    /**
+     * Password-protect with real AES-256 (PDF 2.0, security-handler revision 6).
+     *
+     * <p>The password is used here and nowhere else: it is never written into the
+     * file, never logged and never stored. Nothing about it leaves the device, so a
+     * lost password really is unrecoverable - that is the point of the format.
+     *
+     * @param perms any OR of PERM_PRINT / PERM_COPY / PERM_EDIT
+     */
+    public static void encrypt(File src, String userPassword, String ownerPassword,
+                               int perms, File out) throws Exception {
         try (PDDocument d = open(src)) {
+            boolean print = (perms & PERM_PRINT) != 0;
+            boolean copy = (perms & PERM_COPY) != 0;
+            boolean edit = (perms & PERM_EDIT) != 0;
             AccessPermission ap = new AccessPermission();
-            // Reading and printing stay allowed; changing the document does not.
-            ap.setCanPrint(true);
-            ap.setCanPrintDegraded(true);
-            ap.setCanExtractContent(true);
-            ap.setCanExtractForAccessibility(true);
-            ap.setCanModify(false);
-            ap.setCanModifyAnnotations(false);
-            ap.setCanFillInForm(false);
-            ap.setCanAssembleDocument(false);
+            ap.setCanPrint(print);
+            ap.setCanPrintDegraded(print);
+            ap.setCanExtractContent(copy);
+            ap.setCanExtractForAccessibility(copy);
+            ap.setCanModify(edit);
+            ap.setCanModifyAnnotations(edit);
+            ap.setCanFillInForm(edit);
+            ap.setCanAssembleDocument(edit);
+            String owner = (ownerPassword == null || ownerPassword.isEmpty()) ? userPassword : ownerPassword;
             StandardProtectionPolicy policy = new StandardProtectionPolicy(
-                    ownerPassword == null || ownerPassword.isEmpty() ? userPassword : ownerPassword,
-                    userPassword == null ? "" : userPassword, ap);
-            policy.setEncryptionKeyLength(256);
+                    owner, userPassword == null ? "" : userPassword, ap);
+            policy.setEncryptionKeyLength(256);      // AES-256
             policy.setPermissions(ap);
             d.protect(policy);
             d.save(out);
@@ -1590,6 +1614,148 @@ public final class PdfEngine {
         if (lower.startsWith("www.")) return "https://" + s;
         if (lower.matches("[a-z0-9.-]+\\.[a-z]{2,}(/.*)?")) return "https://" + s;
         return null;
+    }
+
+    // ------------------------------------------------------------------
+    // Bookmarks (the outline every reader shows in its sidebar)
+    // ------------------------------------------------------------------
+
+    /** One entry in a document's outline. */
+    public static final class Bookmark {
+        public final String title;
+        public final int page;    // 1-based
+        public final int depth;   // 0 = top level
+
+        public Bookmark(String title, int page) { this(title, page, 0); }
+
+        public Bookmark(String title, int page, int depth) {
+            this.title = title == null ? "" : title;
+            this.page = page;
+            this.depth = Math.max(0, depth);
+        }
+    }
+
+    /** Read the outline. Empty when the document has none. */
+    public static List<Bookmark> bookmarks(File src) throws Exception {
+        List<Bookmark> out = new ArrayList<>();
+        try (PDDocument d = open(src)) {
+            PDDocumentOutline outline = d.getDocumentCatalog().getDocumentOutline();
+            if (outline != null) collectOutline(outline.getFirstChild(), d, out, 0);
+        }
+        return out;
+    }
+
+    private static void collectOutline(PDOutlineItem first, PDDocument d,
+                                       List<Bookmark> out, int depth) throws Exception {
+        if (first == null || depth > 12) return;
+        PDOutlineItem item = first;
+        int guard = 0;
+        while (item != null && guard++ < 5000) {
+            int page = 1;
+            try {
+                PDPage dest = item.findDestinationPage(d);
+                if (dest != null) page = d.getPages().indexOf(dest) + 1;
+            } catch (Exception ignored) { }
+            out.add(new Bookmark(item.getTitle(), page, depth));
+            PDOutlineItem child = item.getFirstChild();
+            if (child != null) collectOutline(child, d, out, depth + 1);
+            item = item.getNextSibling();
+        }
+    }
+
+    /** Replace the outline with exactly these entries, in this order. */
+    public static void setBookmarks(File src, List<Bookmark> marks, File out) throws Exception {
+        try (PDDocument d = open(src)) {
+            PDDocumentOutline outline = new PDDocumentOutline();
+            d.getDocumentCatalog().setDocumentOutline(outline);
+            int n = d.getNumberOfPages();
+            if (marks != null && !marks.isEmpty()) {
+                PDOutlineItem lastTop = null;
+                for (Bookmark b : marks) {
+                    int page = Math.max(1, Math.min(b.page, n));
+                    PDOutlineItem item = new PDOutlineItem();
+                    item.setTitle(b.title.trim().isEmpty() ? ("Page " + page) : b.title.trim());
+                    item.setDestination(d.getPage(page - 1));
+                    if (b.depth <= 0 || lastTop == null) {
+                        outline.addLast(item);
+                        lastTop = item;
+                    } else {
+                        lastTop.addLast(item);   // one level of nesting is plenty here
+                    }
+                }
+                outline.openNode();
+            }
+            d.save(out);
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Plain-text report (used by the activity-log export)
+    // ------------------------------------------------------------------
+
+    /** Lay wrapped text out into a clean, multi-page A4 PDF. */
+    public static void reportPdf(File out, String title, List<String> lines) throws Exception {
+        final float margin = 56f, leading = 15f, body = 10.5f, head = 17f;
+        try (PDDocument d = new PDDocument()) {
+            PDFont font = PDType1Font.HELVETICA;
+            PDFont bold = PDType1Font.HELVETICA_BOLD;
+            float pageW = PDRectangle.A4.getWidth(), pageH = PDRectangle.A4.getHeight();
+            float maxW = pageW - margin * 2f;
+            PDPage page = new PDPage(PDRectangle.A4);
+            d.addPage(page);
+            PDPageContentStream cs = new PDPageContentStream(d, page);
+            float y = pageH - margin;
+            for (String tl : wrapText(title == null ? "" : title, bold, head, maxW)) {
+                textAt(cs, bold, head, margin, y, tl);
+                y -= leading * 1.5f;
+            }
+            y -= 8f;
+            List<String> all = lines == null ? new ArrayList<String>() : lines;
+            for (String raw : all) {
+                for (String l : wrapText(raw == null ? "" : raw, font, body, maxW)) {
+                    if (y < margin) {
+                        cs.close();
+                        page = new PDPage(PDRectangle.A4);
+                        d.addPage(page);
+                        cs = new PDPageContentStream(d, page);
+                        y = pageH - margin;
+                    }
+                    textAt(cs, font, body, margin, y, l);
+                    y -= leading;
+                }
+            }
+            cs.close();
+            d.save(out);
+        }
+    }
+
+    private static void textAt(PDPageContentStream cs, PDFont f, float size,
+                               float x, float y, String s) throws Exception {
+        cs.beginText();
+        cs.setFont(f, size);
+        cs.newLineAtOffset(x, y);
+        cs.showText(winAnsi(s));
+        cs.endText();
+    }
+
+    private static List<String> wrapText(String s, PDFont f, float size, float maxW) throws Exception {
+        List<String> out = new ArrayList<>();
+        String safe = winAnsi(s);
+        if (safe.isEmpty()) { out.add(""); return out; }
+        for (String para : safe.split("\n", -1)) {
+            StringBuilder line = new StringBuilder();
+            for (String w : para.split(" ")) {
+                String cand = line.length() == 0 ? w : line + " " + w;
+                if (f.getStringWidth(cand) / 1000f * size > maxW && line.length() > 0) {
+                    out.add(line.toString());
+                    line = new StringBuilder(w);
+                } else {
+                    line = new StringBuilder(cand);
+                }
+            }
+            out.add(line.toString());
+        }
+        return out;
     }
 
     // ------------------------------------------------------------------

@@ -1,11 +1,11 @@
-# NovaPDF
+# KavoPDF
 
 **A serious, offline-first PDF editor for Android.** Everything runs on the device —
 no accounts, no uploads, no network permission. Open any PDF and read it with smooth
 pinch-zoom, then actually edit it: merge, split, reorganise pages by dragging them,
 annotate, sign, fill forms, watermark, protect, compress and more.
 
-Package: `com.vk062777.pdfsmith` · Display name: **NovaPDF** · Licence: Apache-2.0
+Package: `com.vk062777.pdfsmith` · Display name: **KavoPDF** · Licence: Apache-2.0
 
 > The package id is kept stable so the app upgrades cleanly in place and the signing
 > key stays valid. It can be renamed before the first Play Store upload on request.
@@ -462,3 +462,27 @@ This runs automatically on every push in GitHub Actions, before the APK is built
 The PDF engine is built on [Apache PDFBox](https://pdfbox.apache.org/) via the
 Android port [PdfBox-Android](https://github.com/TomRoush/PdfBox-Android)
 (Apache-2.0).
+
+## What's new in 2.0.0 - KavoPDF
+
+The app is now **KavoPDF**. The package id is unchanged, so updates install straight
+over the old one.
+
+- **New launcher icon** - a bold amber K, drawn as a vector/adaptive icon for every
+  launcher shape and size (circle, squircle, legacy square and round, plus a
+  monochrome layer for themed icons).
+- **Every dialog is rounded.** The dialog surface is defined once in the theme, so a
+  new dialog cannot come out square by accident.
+- **No more jittery overscroll.** The stretch effect that broke and stuttered at the
+  end of a scroll is gone from every list and scroll view.
+- **Protection upgraded.** Real AES-256 (PDF 2.0, handler revision 6) with a choice of
+  permissions, an optional separate owner password, and a weak-password warning. The
+  password is never stored, never logged and never leaves the device.
+- **Bookmarks.** Read and write the PDF outline, so any reader shows your entries in
+  its sidebar.
+- **Activity log.** Every completed task is recorded locally with a timestamp, and the
+  whole log exports to a PDF carrying the app version, package, device and Android
+  build. Passwords are never written to it.
+
+Verified on every build: AES-256 parameters and enforcement, the outline read back by
+an independent library, the log export, plus everything from before.

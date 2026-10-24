@@ -90,7 +90,7 @@ public final class PdfSigner {
             PDSignature sig = new PDSignature();
             sig.setFilter(PDSignature.FILTER_ADOBE_PPKLITE);
             sig.setSubFilter(PDSignature.SUBFILTER_ADBE_PKCS7_DETACHED);
-            sig.setName(p.name == null || p.name.isEmpty() ? "NovaPDF signer" : p.name);
+            sig.setName(p.name == null || p.name.isEmpty() ? "KavoPDF signer" : p.name);
             if (p.reason != null && !p.reason.isEmpty()) sig.setReason(p.reason);
             if (p.location != null && !p.location.isEmpty()) sig.setLocation(p.location);
             if (p.contact != null && !p.contact.isEmpty()) sig.setContactInfo(p.contact);
@@ -223,7 +223,7 @@ public final class PdfSigner {
     }
 
     private static X509Certificate selfSigned(KeyPair kp, String cn, String org) throws Exception {
-        String commonName = (cn == null || cn.trim().isEmpty()) ? "NovaPDF signer" : cn.trim();
+        String commonName = (cn == null || cn.trim().isEmpty()) ? "KavoPDF signer" : cn.trim();
         String name = "CN=" + clean(commonName)
                 + ((org == null || org.trim().isEmpty()) ? "" : ", O=" + clean(org.trim()));
         X500Principal principal = new X500Principal(name);
