@@ -87,7 +87,7 @@ class ImageOcrActivity : PdfActivity() {
                 return@launch
             }
             runAndSave(Files.sanitize("images_searchable.pdf")) { out ->
-                val flat = Files.newFile(this, "imgflat.pdf")
+                val flat = Files.newFile(this@ImageOcrActivity, "imgflat.pdf")
                 PdfEngine.imagesToPdf(inputs, flat, OCR_MAX, false)
                 PdfEngine.addTextLayer(flat, pages, out)
             }
