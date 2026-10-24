@@ -17,6 +17,8 @@
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:navigationBarColor">@color/surface</item>
         <item name="android:windowAnimationStyle">@style/Animation.PDFsmith</item>
+        <item name="alertDialogTheme">@style/ThemeOverlay.KavoPDF.Dialog</item>
+        <item name="materialAlertDialogTheme">@style/ThemeOverlay.KavoPDF.Dialog</item>
     </style>
 
     <style name="Theme.PDFsmith.Teal">
@@ -57,4 +59,16 @@
         <item name="android:letterSpacing">0.06</item>
     </style>
 
+    <!-- Every dialog gets the same soft, rounded surface. In the theme so a new
+         dialog can never come out square by accident. -->
+    <style name="ShapeAppearance.KavoPDF.Dialog" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">26dp</item>
+    </style>
+
+    <style name="ThemeOverlay.KavoPDF.Dialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearance.KavoPDF.Dialog</item>
+        <item name="android:windowBackground">@drawable/bg_dialog_rounded</item>
+        <item name="android:backgroundDimAmount">0.55</item>
+    </style>
 </resources>

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">NovaPDF</string>
+    <string name="app_name">KavoPDF</string>
     <string name="app_tagline">Serious PDF editing, offline and fast</string>
 
     <string name="section_edit">Edit</string>
@@ -134,7 +134,7 @@
     <string name="msg_need_selection">Select at least one page</string>
     <string name="msg_keep_one">At least one page must remain</string>
     <string name="msg_invalid_ranges">Enter valid page ranges</string>
-    <string name="msg_offline">NovaPDF works fully offline. Your files never leave your device.</string>
+    <string name="msg_offline">KavoPDF works fully offline. Your files never leave your device.</string>
 
     <string name="cd_tool_icon">Tool icon</string>
 
@@ -167,7 +167,7 @@
     <string name="msg_sig_invalid">Signature INVALID — the document does not match the signature (it was changed after signing).</string>
     <string name="msg_sig_tampered">The signed bytes have been altered since signing.</string>
     <string name="msg_sig_partial">The signature does not cover the whole file (content was added after signing).</string>
-    <string name="msg_sig_selfsigned">The certificate is self-signed (issued by NovaPDF, not a public CA). The signature still proves the file is unchanged.</string>
+    <string name="msg_sig_selfsigned">The certificate is self-signed (issued by KavoPDF, not a public CA). The signature still proves the file is unchanged.</string>
     <string name="title_signature">Signature</string>
 
     <string name="create_page_size">Page size</string>
@@ -281,5 +281,33 @@
     <string name="redact_working">Redacting\u2026</string>
     <string name="redact_done">Redacted %1$d page(s)</string>
     <string name="redact_zoom">Zoom</string>
-    <string name="redact_zoom_on">Zoom mode: pinch to zoom, drag to move. Tap the tick to go back to marking.</string>
+    <string name="redact_zoom_on">Zoom mode: pinch to zoom, drag to move. Tap the tick to go back to marking.</string>    <string name="hint_owner_password">Owner password (optional, for permissions)</string>
+    <string name="label_permissions">What the reader may do</string>
+    <string-array name="perm_choices">
+        <item>View only — no printing, no copying</item>
+        <item>View and print</item>
+        <item>View, print and copy text</item>
+        <item>Everything — also allow editing</item>
+    </string-array>
+    <string name="pw_too_short">Use at least 6 characters</string>
+    <string name="pw_weak">That password is easy to guess — a longer one protects better</string>
+    <string name="tool_bookmarks">Bookmarks</string>
+    <string name="tool_bookmarks_desc">Add a navigation outline to a PDF</string>
+    <string name="bookmarks_info">Bookmarks become the PDF outline, so every reader shows them in its sidebar. Title and page number are up to you.</string>
+    <string name="bookmark_add">Add a bookmark</string>
+    <string name="bookmark_save">Save bookmarks</string>
+    <string name="bookmark_title">Title</string>
+    <string name="bookmark_page">Page</string>
+    <string name="bookmark_remove">Remove this bookmark</string>
+    <string name="bookmark_none">No bookmarks yet — add one below</string>
+    <string name="msg_need_bookmark">Add at least one bookmark</string>
+    <string name="tool_log">Activity log</string>
+    <string name="tool_log_desc">See what the app has done, and export it</string>
+    <string name="log_info">Everything the app has done on this device, newest first. Stays on your phone. Passwords are never written here.</string>
+    <string name="log_empty">Nothing logged yet</string>
+    <string name="log_export">Export as PDF</string>
+    <string name="log_clear">Clear log</string>
+    <string name="log_cleared">Log cleared</string>
+    <string name="log_confirm_clear">Clear the whole activity log?</string>
+    <string name="log_report_title">KavoPDF activity log</string>
 </resources>
