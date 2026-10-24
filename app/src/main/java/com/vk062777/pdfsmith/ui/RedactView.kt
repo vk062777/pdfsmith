@@ -22,7 +22,7 @@ class RedactView @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
 ) : View(context, attrs, defStyleAttr) {
 
-    var imageView: ImageView? = null
+    var imageView: ZoomableImageView? = null
 
     /** When false the view only draws existing boxes and lets the image zoom/pan. */
     var drawingEnabled = true
