@@ -216,8 +216,6 @@ abstract class PdfActivity : AppCompatActivity() {
 
     protected fun toast(msg: String) = Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
 
-    protected fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
-
     private fun takePersist(uri: Uri) {
         try {
             contentResolver.takePersistableUriPermission(

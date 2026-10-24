@@ -140,4 +140,6 @@ class BookmarksActivity : PdfActivity() {
             PdfEngine.setBookmarks(src, marks, out)
         }
     }
+
+    private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
 }

@@ -111,4 +111,6 @@ class LogActivity : PdfActivity() {
         val pi = packageManager.getPackageInfo(packageName, 0)
         if (Build.VERSION.SDK_INT >= 28) pi.longVersionCode else pi.versionCode.toLong()
     } catch (_: Exception) { 0L }
+
+    private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
 }
