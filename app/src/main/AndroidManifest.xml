@@ -5,6 +5,10 @@
     <!-- ML Kit's library declares these; the bundled recogniser works entirely
          offline, so they are removed from the merged manifest. -->
     <uses-permission android:name="android.permission.INTERNET" tools:node="remove" />
+    <!-- The only real permission the app asks for, and only for the two camera
+         features. It is requested at runtime, never at install. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera.any" android:required="false" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" tools:node="remove" />
 
     <application
@@ -52,6 +56,18 @@
         <activity android:name=".FormsActivity" android:exported="false" android:label="@string/tool_forms"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode" />
         <activity android:name=".ToolsActivity" android:exported="false"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode" />
+        <activity
+            android:name=".QrScanActivity"
+            android:exported="false"
+            android:label="@string/tool_qr"
+            android:screenOrientation="portrait"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode" />
+        <activity
+            android:name=".ScanToPdfActivity"
+            android:exported="false"
+            android:label="@string/tool_scan_pdf"
+            android:screenOrientation="portrait"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode" />
         <activity
             android:name=".BookmarksActivity"

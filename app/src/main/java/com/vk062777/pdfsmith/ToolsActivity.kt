@@ -149,17 +149,27 @@ class ToolsActivity : PdfActivity() {
     // ---- dynamic parameter UI ---------------------------------------------
 
     private fun addField(hint: String, inputType: Int = InputType.TYPE_CLASS_TEXT, prefill: String = ""): EditText {
+        val masked = (inputType and InputType.TYPE_TEXT_VARIATION_PASSWORD) != 0 ||
+                (inputType and InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD) != 0
         val til = TextInputLayout(this).apply {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
             ).also { it.topMargin = dp(12) }
             this.hint = hint
+            // Set the shape here rather than trusting the theme: a field must never
+            // come out as a bare underline.
+            boxBackgroundMode = TextInputLayout.BOX_BACKGROUND_FILLED
+            boxBackgroundColor = getColor(R.color.field_bg)
+            setBoxCornerRadii(dp(26).toFloat(), dp(26).toFloat(), dp(26).toFloat(), dp(26).toFloat())
+            setBoxStrokeWidth(0)
+            setBoxStrokeWidthFocused(0)
+            if (masked) endIconMode = TextInputLayout.END_ICON_PASSWORD_TOGGLE
         }
-        val et = TextInputEditText(this).apply {
-            this.inputType = inputType
-            setText(prefill)
-        }
+        val et = TextInputEditText(this).apply { this.inputType = inputType }
         til.addView(et)
+        // Only set the text once the field is attached - otherwise the label never
+        // floats and ends up drawn on top of the value.
+        if (prefill.isNotEmpty()) til.editText?.setText(prefill)
         binding.params.addView(til)
         return et
     }

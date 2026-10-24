@@ -70,7 +70,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         val accents = listOf(
-            v.accentIndigo, v.accentTeal, v.accentViolet, v.accentGreen, v.accentCrimson
+            v.accentIndigo, v.accentTeal, v.accentViolet, v.accentGreen, v.accentCrimson, v.accentAmber
         )
         val currentAccent = PdfSmithApp.accentPref(this)
         accents.forEachIndexed { i, b ->
@@ -103,6 +103,8 @@ class MainActivity : AppCompatActivity() {
             Action.IMAGE_OCR -> Intent(this, ImageOcrActivity::class.java)
             Action.REDACT -> Intent(this, RedactActivity::class.java)
             Action.BOOKMARKS -> Intent(this, BookmarksActivity::class.java)
+            Action.QR_SCAN -> Intent(this, QrScanActivity::class.java)
+            Action.SCAN_PDF -> Intent(this, ScanToPdfActivity::class.java)
             Action.LOG -> Intent(this, LogActivity::class.java)
             else -> Intent(this, ToolsActivity::class.java)
                 .putExtra(ToolsActivity.EXTRA_TOOL, action.name)
@@ -118,6 +120,8 @@ class MainActivity : AppCompatActivity() {
         add(HomeRow.Header(R.string.section_create))
         add(HomeRow.Tool(ToolItem(R.string.tool_create_pdf, R.string.tool_create_pdf_desc, R.drawable.ic_add, Action.CREATE_PDF)))
         add(HomeRow.Tool(ToolItem(R.string.tool_images_pdf, R.string.tool_images_pdf_desc, R.drawable.ic_image_pdf, Action.IMAGES_PDF)))
+        add(HomeRow.Tool(ToolItem(R.string.tool_qr, R.string.tool_qr_desc, R.drawable.ic_qr, Action.QR_SCAN)))
+        add(HomeRow.Tool(ToolItem(R.string.tool_scan_pdf, R.string.tool_scan_pdf_desc, R.drawable.ic_scan, Action.SCAN_PDF)))
 
         add(HomeRow.Header(R.string.section_edit))
         add(HomeRow.Tool(ToolItem(R.string.tool_view, R.string.tool_view_desc, R.drawable.ic_view, Action.VIEW)))

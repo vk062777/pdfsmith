@@ -93,12 +93,18 @@ class FormsActivity : PdfActivity() {
                 )
                 val opts = if (field.options.isNotEmpty()) " — " + field.options.joinToString(", ") else ""
                 hint = field.type + opts
+                boxBackgroundMode = TextInputLayout.BOX_BACKGROUND_FILLED
+                boxBackgroundColor = getColor(R.color.field_bg)
+                val r = (26 * resources.displayMetrics.density)
+                setBoxCornerRadii(r, r, r, r)
+                setBoxStrokeWidth(0)
+                setBoxStrokeWidthFocused(0)
             }
             val et = TextInputEditText(this).apply {
                 inputType = if (field.type == "text") InputType.TYPE_CLASS_TEXT else InputType.TYPE_CLASS_TEXT
-                setText(field.value ?: "")
             }
             til.addView(et)
+            if (!field.value.isNullOrEmpty()) til.editText?.setText(field.value)
             til
         }
         binding.container.addView(view)

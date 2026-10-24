@@ -105,6 +105,10 @@ class ZoomableImageView @JvmOverloads constructor(
                 onZoomSettled?.invoke(zoom)
             }
         }
+        // Hand the event to the framework as well: that is what runs the click and
+        // long-press detection. Without it setOnLongClickListener never fires, which
+        // is why long-pressing a page to copy its text did nothing.
+        super.onTouchEvent(event)
         return true
     }
 

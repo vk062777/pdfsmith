@@ -535,3 +535,28 @@ shipped background is `#FF15181D`.
 
 Verified on every build: the report's structure and colour, that the chosen font
 really reaches the PDF, plus everything from before.
+## What's new in 2.2.0
+
+- **Copying text out of a PDF now works.** The page view swallowed every touch
+  event and never called through to the framework, so the long-press that opens
+  the copy dialog never fired. Long-press a page to copy a word or the whole page.
+- **Every input field is a pill, and the label no longer sits on the value.**
+  The text was being set before the field was attached, so the label never floated.
+  Fixed for metadata, watermark, signature, page numbering, split, forms, protect
+  and unlock - all of them.
+- **Passwords can be shown**: protect and unlock fields have a reveal eye.
+- **Compressing never grows a file.** A tiny or already-optimised PDF used to come
+  out bigger; now the original is kept whenever that would happen.
+- **Redact** zooms and pans with two fingers, so you can reach any part of a page
+  before drawing a box.
+- **The link screen is all pills**, and the bookmark title/page fields are spaced.
+- **The pen-thickness slider is longer** (the swatches gave up the room).
+- **The Amber theme is now reachable** - it existed, but the theme picker only
+  listed five swatches, so it could never be chosen.
+- **QR & barcode scanner**: reads every format with the bundled offline model, with
+  copy / open / share and a torch.
+- **Scan to PDF**: photograph pages with the camera and assemble them into one PDF.
+
+The camera screens need the CAMERA permission, which is requested at runtime and is
+the only real permission the app asks for. The CI guard still fails the build if
+anything else (INTERNET included) creeps in.

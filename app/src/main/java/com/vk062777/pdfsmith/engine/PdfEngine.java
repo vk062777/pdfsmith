@@ -668,6 +668,18 @@ public final class PdfEngine {
     }
 
     public static void compress(File src, File out, int maxDimension, float jpegQuality) throws Exception {
+        long before = src.length();
+        compressInto(src, out, maxDimension, jpegQuality);
+        // A tiny or already-optimised file can come out larger once the images are
+        // re-encoded. When that happens the original is simply kept, so compressing
+        // never costs the user space.
+        if (out.length() >= before) {
+            java.nio.file.Files.copy(src.toPath(), out.toPath(),
+                    java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        }
+    }
+
+    private static void compressInto(File src, File out, int maxDimension, float jpegQuality) throws Exception {
         try (PDDocument d = open(src)) {
             IdentityHashMap<COSBase, Boolean> seenImages = new IdentityHashMap<>();
             IdentityHashMap<COSBase, Boolean> seenResources = new IdentityHashMap<>();

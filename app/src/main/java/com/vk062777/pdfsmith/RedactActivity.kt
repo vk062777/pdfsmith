@@ -47,8 +47,7 @@ class RedactActivity : PdfActivity() {
         setSupportActionBar(binding.toolbar)
         binding.toolbar.setNavigationOnClickListener { finish() }
         binding.redactView.imageView = binding.pageImage
-        // one finger draws, two fingers pinch - so no single-finger panning
-        binding.pageImage.panEnabled = false
+        // one finger draws; two fingers zoom and pan (RedactView toggles this)
         binding.btnChoose.setOnClickListener { pickPdf() }
         binding.prevPage.setOnClickListener { goTo(current - 1) }
         binding.nextPage.setOnClickListener { goTo(current + 1) }

@@ -104,7 +104,8 @@ class BookmarksActivity : PdfActivity() {
             inputType = InputType.TYPE_CLASS_NUMBER
             background = getDrawable(R.drawable.bg_field_pill)
             setPadding(dp(14), dp(12), dp(14), dp(12))
-            layoutParams = LinearLayout.LayoutParams(dp(88), LinearLayout.LayoutParams.WRAP_CONTENT)
+            layoutParams = LinearLayout.LayoutParams(dp(96), LinearLayout.LayoutParams.WRAP_CONTENT)
+                .also { it.marginStart = dp(10) }
         }
         val del = TextView(this).apply {
             text = "\u2715"

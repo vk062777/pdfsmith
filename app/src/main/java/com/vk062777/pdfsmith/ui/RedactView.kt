@@ -85,7 +85,10 @@ class RedactView @JvmOverloads constructor(
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        // The image view gets every event so pinch-zoom keeps working...
+        // The image view gets every event so pinch-zoom keeps working. Panning is
+        // switched on only while two fingers are down, so one finger never drags
+        // the page out from under a box being drawn.
+        imageView?.panEnabled = event.pointerCount >= 2
         imageView?.onTouchEvent(event)
         // ...but two fingers mean zoom, never a redaction box.
         if (event.pointerCount >= 2) {
