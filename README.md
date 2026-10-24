@@ -499,3 +499,13 @@ an independent library, the log export, plus everything from before.
 - **No more stutter when the file picker opens.** A tool screen opened the picker
   immediately, while its own slide-in animation was still running, and the two
   transitions fought. The picker now opens once the screen has settled.
+## What's new in 2.0.2 - the launcher background is fixed
+
+The adaptive icon takes its background from `values/launcher.xml`. When the working
+copy was restored from the 1.13.0 source, that file came back as the old teal
+(`#FF02A79F`) and the re-apply step never rewrote it - so 2.0.0 and 2.0.1 shipped a
+teal background behind the new K.
+
+Fixed for good: the icon generator now writes `values/launcher.xml` itself, next to
+the artwork, so the background colour and the K can never drift apart again. The
+shipped background is `#FF15181D`.
