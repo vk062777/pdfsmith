@@ -28,7 +28,7 @@ echo "== running engine verification =="
 java -cp "$CP" TestEngine
 
 echo "== rotation / overlay placement (rendered and pixel-checked) =="
-javac -cp "$CP" -d out TestRotate.java TestCrop.java TestEnc.java TestHostile.java TestTextLayer.java TestSearch.java TestLinkIcon.java TestTextLink.java TestOpacity.java TestAllPages.java TestCopy.java
+javac -cp "$CP" -d out TestRotate.java TestCrop.java TestEnc.java TestHostile.java TestTextLayer.java TestSearch.java TestLinkIcon.java TestTextLink.java TestOpacity.java TestAllPages.java TestCopy.java TestRedact.java
 java -cp "$CP" TestRotate
 java -cp "$CP" TestCrop
 java -cp "$CP" TestEnc
@@ -68,5 +68,10 @@ python3 verify-allpages.py
 echo "== text lookup for tap-to-copy =="
 java -cp "$CP" TestCopy
 python3 verify-copy.py
+
+echo "== redaction: is the content really gone? =="
+python3 verify-redact-setup.py
+java -cp "$CP" TestRedact
+python3 verify-redact.py
 python3 -m pip install --quiet pymupdf >/dev/null 2>&1 || true
 python3 verify-render.py

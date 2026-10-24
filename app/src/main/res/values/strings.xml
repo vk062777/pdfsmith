@@ -272,4 +272,12 @@
     <string name="copy_nothing">No text on this page</string>
     <string name="copied">Copied</string>
     <string name="hint_copy">Long press the page to copy text</string>
+    <string name="tool_redact">Redact</string>
+    <string name="tool_redact_desc">Permanently remove private text before sharing</string>
+    <string name="redact_intro">Drag over anything private to hide it. Tap a box to remove it. Redacted pages are flattened to an image, so the hidden text is really gone \u2014 not just covered.</string>
+    <string name="redact_clear_page">Clear page</string>
+    <string name="redact_apply">Redact &amp; save</string>
+    <string name="redact_need_boxes">Mark at least one area to hide</string>
+    <string name="redact_working">Redacting\u2026</string>
+    <string name="redact_done">Redacted %1$d page(s)</string>
 </resources>

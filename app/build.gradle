@@ -11,8 +11,8 @@ android {
         applicationId "com.vk062777.pdfsmith"
         minSdk 24
         targetSdk 34
-        versionCode 12
-        versionName "1.11.0"
+        versionCode 13
+        versionName "1.12.0"
 
         ndk {
             // Real phones are ARM. The x86/x86_64 slices only exist for emulators

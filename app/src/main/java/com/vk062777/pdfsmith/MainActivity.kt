@@ -99,6 +99,7 @@ class MainActivity : AppCompatActivity() {
             Action.OCR -> Intent(this, OcrActivity::class.java)
             Action.LINKS -> Intent(this, LinksActivity::class.java)
             Action.IMAGE_OCR -> Intent(this, ImageOcrActivity::class.java)
+            Action.REDACT -> Intent(this, RedactActivity::class.java)
             else -> Intent(this, ToolsActivity::class.java)
                 .putExtra(ToolsActivity.EXTRA_TOOL, action.name)
         }
@@ -125,13 +126,14 @@ class MainActivity : AppCompatActivity() {
         add(HomeRow.Tool(ToolItem(R.string.tool_links, R.string.tool_links_desc, R.drawable.ic_link, Action.LINKS)))
         add(HomeRow.Tool(ToolItem(R.string.tool_merge, R.string.tool_merge_desc, R.drawable.ic_merge, Action.MERGE)))
         add(HomeRow.Tool(ToolItem(R.string.tool_split, R.string.tool_split_desc, R.drawable.ic_split, Action.SPLIT)))
-        add(HomeRow.Tool(ToolItem(R.string.tool_watermark, R.string.tool_watermark_desc, R.drawable.ic_watermark, Action.WATERMARK)))
 
         add(HomeRow.Header(R.string.section_security))
         add(HomeRow.Tool(ToolItem(R.string.tool_sign, R.string.tool_sign_desc, R.drawable.ic_sign, Action.SIGN)))
         add(HomeRow.Tool(ToolItem(R.string.tool_verify, R.string.tool_verify_desc, R.drawable.ic_verify, Action.VERIFY)))
         add(HomeRow.Tool(ToolItem(R.string.tool_protect, R.string.tool_protect_desc, R.drawable.ic_lock, Action.PROTECT)))
         add(HomeRow.Tool(ToolItem(R.string.tool_unlock, R.string.tool_unlock_desc, R.drawable.ic_unlock, Action.UNLOCK)))
+        add(HomeRow.Tool(ToolItem(R.string.tool_watermark, R.string.tool_watermark_desc, R.drawable.ic_watermark, Action.WATERMARK)))
+        add(HomeRow.Tool(ToolItem(R.string.tool_redact, R.string.tool_redact_desc, R.drawable.ic_redact, Action.REDACT)))
 
         add(HomeRow.Header(R.string.section_output))
         add(HomeRow.Tool(ToolItem(R.string.tool_compress, R.string.tool_compress_desc, R.drawable.ic_compress, Action.COMPRESS)))

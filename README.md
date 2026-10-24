@@ -306,6 +306,42 @@ permissions at all, enforced by the CI guard.
 - The tap-to-copy word boxes are checked against the rendered ink, and the page text
   against what is actually written on the page.
 
+
+## What's new in 1.12.0 — Redact
+
+Mark anything private on a page and remove it for good before sharing.
+
+**A redaction is not a box.** Drawing a black rectangle leaves the text in the file -
+anyone can select it, copy it, or pull it out. So a redacted page is **replaced by a
+flat image** with the marked areas painted black: the page's original content stream,
+its resources and its annotations are all discarded. Only the pages you mark are
+flattened; every other page keeps its real text.
+
+**How to use it:** Redact -> choose the PDF -> drag over anything private (as many
+boxes as you like, tap a box to remove it) -> Redact & save.
+
+### Verification
+
+The redaction is checked the only way that matters - by looking for the content
+afterwards:
+
+- nothing secret is extractable as text
+- **nothing secret survives in any decompressed stream in the file** (this is the
+  real test: it catches content that is merely hidden from the text extractor)
+- pages that were not redacted keep their text
+- page count and page sizes are unchanged
+- the redacted areas render 100% solid black
+
+The fixture has a secret on a normal page and a secret on a **rotated** page, so the
+rotation handling is covered too.
+
+### Home screen
+
+Adding Redact left the tool grid with a half-empty row, so the sections were
+rebalanced: **Watermark** moved to Security (where it belongs - watermarking is an
+ownership mark) and **Redact** sits beside it. Every section now has an even number
+of tiles (2, 4, 4, 6, 6 = 22 tools), so there are no gaps anywhere.
+
 ## Features
 
 | Tool | What it does |
