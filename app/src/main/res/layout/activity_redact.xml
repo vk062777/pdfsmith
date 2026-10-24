@@ -76,12 +76,11 @@
         android:layout_marginTop="8dp"
         android:layout_weight="1">
 
-        <ImageView
+        <com.vk062777.pdfsmith.ui.ZoomableImageView
             android:id="@+id/pageImage"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:contentDescription="@string/tool_redact"
-            android:scaleType="fitCenter" />
+            android:contentDescription="@string/tool_redact" />
 
         <com.vk062777.pdfsmith.ui.RedactView
             android:id="@+id/redactView"
@@ -94,6 +93,15 @@
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
         android:orientation="horizontal">
+
+        <ImageButton
+            android:id="@+id/btnZoom"
+            android:layout_width="46dp"
+            android:layout_height="46dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/redact_zoom"
+            android:src="@drawable/ic_zoom"
+            app:tint="@color/white" />
 
         <ImageButton
             android:id="@+id/prevPage"

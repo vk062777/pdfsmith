@@ -342,6 +342,45 @@ rebalanced: **Watermark** moved to Security (where it belongs - watermarking is 
 ownership mark) and **Redact** sits beside it. Every section now has an even number
 of tiles (2, 4, 4, 6, 6 = 22 tools), so there are no gaps anywhere.
 
+
+## What's new in 1.13.0 — Redact fixes
+
+Three real bugs, all found from the report and fixed:
+
+- **"Can't compress a recycled bitmap".** The save helper hands the work back
+  *after* the user picks a destination, but the page images were being recycled
+  immediately, before the engine could use them. The work now happens entirely
+  inside that callback, one page at a time, so only one large bitmap is ever alive
+  and nothing is freed early. The renderer's own bitmap is no longer recycled
+  either - that was corrupting its cache.
+- **Boxes did not land where you drew them.** Every screen that maps a touch to a
+  page position assumed the image view kept its transform in `imageMatrix`. That is
+  only true for `scaleType="matrix"`. The Crop and Links screens use
+  `scaleType="fitCenter"`, where `imageMatrix` stays identity - so those boxes were
+  mapped against the wrong rectangle. There is now one shared helper that works for
+  both kinds of view, and it is used by the crop, link and redact screens.
+- **No zoom while redacting.** The redact page is now a proper zoomable view with a
+  zoom toggle: in zoom mode you pinch and drag; tap the tick and you are back to
+  drawing. The zoom is kept when you switch back, so you can zoom into small text
+  and then mark it precisely.
+
+### Verification
+
+The redaction check was made much harder, because "hidden" is not the same as
+"gone". After redacting a secret on a normal page and a secret on a **rotated** page,
+the test now confirms all of:
+
+1. no secret in the text extraction of any page
+2. no secret in **any decompressed stream** in the file
+3. no secret in **any object in the xref**, object streams included
+4. no secret in the **raw bytes** of the file
+5. **no earlier revision is left behind** (no incremental update)
+6. the redacted page carries **no font at all** - it is pure image, so it cannot
+   draw text even in principle
+7. the redacted areas render 100% solid black
+8. the rest of the document keeps its text, page count and page sizes
+9. the redacted page's own content stream contains **no text operators at all**
+
 ## Features
 
 | Tool | What it does |

@@ -24,6 +24,9 @@ class RedactView @JvmOverloads constructor(
 
     var imageView: ImageView? = null
 
+    /** When false the view only draws existing boxes and lets the image zoom/pan. */
+    var drawingEnabled = true
+
     /** Committed boxes, normalised to the page. */
     val rects = ArrayList<RectF>()
 
@@ -66,14 +69,7 @@ class RedactView @JvmOverloads constructor(
 
     private fun pageRect(out: RectF): Boolean {
         val iv = imageView ?: return false
-        val d = iv.drawable ?: return false
-        val dw = d.intrinsicWidth.toFloat()
-        val dh = d.intrinsicHeight.toFloat()
-        if (dw <= 0f || dh <= 0f) return false
-        val pts = floatArrayOf(0f, 0f, dw, dh)
-        iv.imageMatrix.mapPoints(pts)
-        out.set(pts[0], pts[1], pts[2], pts[3])
-        return true
+        return drawnImageRect(iv, out)
     }
 
     /** The normalised box, mapped to view coordinates. */
@@ -89,6 +85,7 @@ class RedactView @JvmOverloads constructor(
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
+        if (!drawingEnabled) return false
         val pr = RectF()
         if (!pageRect(pr)) return false
         val x = event.x

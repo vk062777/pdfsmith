@@ -62,14 +62,7 @@ class CropView @JvmOverloads constructor(
 
     private fun pageRect(out: RectF): Boolean {
         val iv = imageView ?: return false
-        val d = iv.drawable ?: return false
-        val dw = d.intrinsicWidth.toFloat()
-        val dh = d.intrinsicHeight.toFloat()
-        if (dw <= 0f || dh <= 0f) return false
-        val pts = floatArrayOf(0f, 0f, dw, dh)
-        iv.imageMatrix.mapPoints(pts)
-        out.set(pts[0], pts[1], pts[2], pts[3])
-        return true
+        return drawnImageRect(iv, out)
     }
 
     override fun onDraw(canvas: Canvas) {

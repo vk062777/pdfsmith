@@ -280,4 +280,6 @@
     <string name="redact_need_boxes">Mark at least one area to hide</string>
     <string name="redact_working">Redacting\u2026</string>
     <string name="redact_done">Redacted %1$d page(s)</string>
+    <string name="redact_zoom">Zoom</string>
+    <string name="redact_zoom_on">Zoom mode: pinch to zoom, drag to move. Tap the tick to go back to marking.</string>
 </resources>

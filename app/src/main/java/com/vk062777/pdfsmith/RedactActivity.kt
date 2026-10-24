@@ -39,6 +39,7 @@ class RedactActivity : PdfActivity() {
     private var current = 0
     private val sizes = mutableListOf<FloatArray>()
     private val marks = HashMap<Int, MutableList<RectF>>()
+    private var zooming = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -50,12 +51,28 @@ class RedactActivity : PdfActivity() {
         binding.btnChoose.setOnClickListener { pickPdf() }
         binding.prevPage.setOnClickListener { goTo(current - 1) }
         binding.nextPage.setOnClickListener { goTo(current + 1) }
+        binding.btnZoom.setOnClickListener { toggleZoom() }
         binding.btnClear.setOnClickListener {
             binding.redactView.clear()
             marks.remove(current)
         }
         binding.btnRun.setOnClickListener { run() }
         pickPdf()
+    }
+
+    /**
+     * Two jobs want the same finger: drawing boxes and zooming. A toggle keeps it
+     * unambiguous - in zoom mode you pinch and pan, in mark mode you draw. The zoom
+     * is kept when you switch back, so you can zoom in and then mark precisely.
+     */
+    private fun toggleZoom() {
+        zooming = !zooming
+        binding.redactView.drawingEnabled = !zooming
+        binding.pageImage.panEnabled = zooming
+        binding.btnZoom.setImageResource(if (zooming) R.drawable.ic_check else R.drawable.ic_zoom)
+        binding.info.text = if (zooming) getString(R.string.redact_zoom_on)
+        else getString(R.string.redact_intro)
+        binding.redactView.invalidate()
     }
 
     override fun onPdfChosen(uri: Uri) {
@@ -116,39 +133,59 @@ class RedactActivity : PdfActivity() {
     private fun run() {
         stashCurrent()
         val src = source ?: return toast(getString(R.string.msg_pick_file_first))
-        val pages = marks.filterValues { it.isNotEmpty() }.keys.sorted()
-        if (pages.isEmpty()) return toast(getString(R.string.redact_need_boxes))
         val r = renderer ?: return
+        val todo = marks.filterValues { it.isNotEmpty() }.keys.sorted()
+            .filter { sizes.getOrNull(it) != null }
+        if (todo.isEmpty()) return toast(getString(R.string.redact_need_boxes))
 
-        lifecycleScope.launch {
-            busy.show(getString(R.string.redact_working))
-            val images = ArrayList<Bitmap>()
-            val applied = ArrayList<Int>()
-            for (page in pages) {
-                val size = sizes.getOrNull(page) ?: continue
-                val boxes = marks[page] ?: continue
-                // render at print resolution so the flattened page stays sharp
+        // NOTE: runAndSave hands the work back later (the user picks a file first),
+        // so nothing may be recycled before the block actually runs.
+        runAndSave(Files.suggestName(sourceName, "_redacted")) { out ->
+            var cur = src
+            todo.forEachIndexed { i, page ->
+                val size = sizes[page]
+                val boxes = marks[page] ?: emptyList()
                 val w = (size[0] * PRINT_DPI / 72f).toInt().coerceIn(600, 4000)
-                val bmp = withContext(Dispatchers.IO) {
-                    runCatching { r.render(page, w) }.getOrNull()
-                } ?: continue
-                val painted = withContext(Dispatchers.Default) { paintBlack(bmp, boxes) }
-                if (painted != bmp) bmp.recycle()
-                images.add(painted)
-                applied.add(page + 1)
+                val rendered = r.render(page, w)
+                val painted = paintBlack(rendered, boxes)
+                    ?: throw IllegalStateException("Could not prepare page ${page + 1}")
+                val target = if (i == todo.lastIndex) out
+                else Files.newFile(this@RedactActivity, "redact_step_$i.pdf")
+                try {
+                    PdfEngine.redactPages(cur, intArrayOf(page + 1),
+                        arrayOf(painted), target)
+                } finally {
+                    // only the copy we made; the renderer's bitmap is left alone
+                    runCatching { painted.recycle() }
+                }
+                cur = target
             }
-            busy.dismiss()
-            if (images.isEmpty()) {
-                toast(getString(R.string.redact_need_boxes))
-                return@launch
-            }
-            val n = applied.size
-            runAndSave(Files.suggestName(sourceName, "_redacted")) { out ->
-                PdfEngine.redactPages(src, applied.toIntArray(), images.toTypedArray(), out)
-                n
-            }
-            images.forEach { runCatching { it.recycle() } }
+            todo.size
         }
+    }
+
+    /** Paint the marked boxes solid black, with a margin so no edge can bleed.
+     *  Always returns a fresh bitmap, or null if a copy could not be made. */
+    private fun paintBlack(bmp: Bitmap, boxes: List<RectF>): Bitmap? {
+        val out = try {
+            bmp.copy(Bitmap.Config.ARGB_8888, true)
+        } catch (t: Throwable) {
+            null
+        } ?: return null
+        val c = Canvas(out)
+        val p = Paint().apply {
+            color = Color.BLACK
+            style = Paint.Style.FILL
+            isAntiAlias = false
+        }
+        val pad = 8f
+        for (b in boxes) {
+            c.drawRect(
+                b.left * out.width - pad, b.top * out.height - pad,
+                b.right * out.width + pad, b.bottom * out.height + pad, p
+            )
+        }
+        return out
     }
 
     /** Paint the marked boxes solid black, with a margin so no edge can bleed. */
