@@ -117,6 +117,14 @@
     <style name="Widget.KavoPDF.Button" parent="Widget.Material3.Button">
         <item name="shapeAppearance">@style/ShapeAppearance.KavoPDF.Pill</item>
     </style>
+
+    <style name="Widget.KavoPDF.Button.Outlined" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="shapeAppearance">@style/ShapeAppearance.KavoPDF.Pill</item>
+    </style>
+
+    <style name="Widget.KavoPDF.Button.Text" parent="Widget.Material3.Button.TextButton">
+        <item name="shapeAppearance">@style/ShapeAppearance.KavoPDF.Pill</item>
+    </style>
     <!-- Material 3 Expressive shape scale: each step is a ShapeAppearance style. -->
     <style name="ShapeAppearance.KavoPDF.CornerExtraSmall" parent="">
         <item name="cornerFamily">rounded</item><item name="cornerSize">8dp</item>

@@ -11,7 +11,12 @@ import sys
 
 from pyaxmlparser import APK
 
-ALLOWED = {"com.vk062777.pdfsmith.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"}
+# CAMERA is the one real permission the app asks for, and only for the QR
+# scanner and the camera-to-PDF screen. Nothing else is allowed in.
+ALLOWED = {
+    "com.vk062777.pdfsmith.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION",
+    "android.permission.CAMERA",
+}
 
 apks = glob.glob("app/build/outputs/apk/release/*.apk")
 if not apks:

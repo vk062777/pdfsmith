@@ -309,5 +309,21 @@
     <string name="log_clear">Clear log</string>
     <string name="log_cleared">Log cleared</string>
     <string name="log_confirm_clear">Clear the whole activity log?</string>
-    <string name="log_report_title">KavoPDF activity log</string>
+    <string name="log_report_title">KavoPDF activity log</string>    <string name="tool_qr">QR &amp; barcode scanner</string>
+    <string name="tool_qr_desc">Read any code with the camera</string>
+    <string name="tool_scan_pdf">Scan to PDF</string>
+    <string name="tool_scan_pdf_desc">Photograph pages into one PDF</string>
+    <string name="qr_hint">Point the camera at a code</string>
+    <string name="qr_torch">Torch</string>
+    <string name="qr_again">Scan again</string>
+    <string name="qr_copied">Copied</string>
+    <string name="qr_not_a_link">That code is not a web link — it has been shown above</string>
+    <string name="qr_no_torch">This camera has no torch</string>
+    <string name="scan_hint">Line the page up and tap Capture</string>
+    <string name="scan_capture">Capture page</string>
+    <string name="scan_create">Create PDF</string>
+    <string name="scan_none">No pages captured yet</string>
+    <string name="scan_count">%1$d page(s) captured</string>
+    <string name="msg_camera_needed">Camera access is needed for this feature</string>
+    <string name="action_copy">Copy</string>
 </resources>
