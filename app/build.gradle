@@ -81,7 +81,7 @@ dependencies {
     implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.8.4'
     implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.4'
     implementation 'androidx.documentfile:documentfile:1.1.0'
-    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1'
     implementation 'com.tom-roush:pdfbox-android:2.0.27.0'
     // On-device OCR. The model is bundled in the APK: fully offline, no
     // Google Play Services and no extra permissions.

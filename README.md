@@ -237,8 +237,10 @@ Checked every dependency and format against what is current:
 - Digital signatures: **SHA-256 + RSA-2048 + CMS/PKCS#7** — current practice.
 - On-device OCR: **ML Kit text-recognition 16.0.1** — the latest release.
 - PDF engine: **PDFBox 2.0.27.0** — the latest Android release.
-- Upgraded: coroutines 1.8.1 -> **1.11.0**, constraintlayout 2.1.4 -> **2.2.2**,
-  documentfile 1.0.1 -> **1.1.0**.
+- Upgraded: constraintlayout 2.1.4 -> **2.2.2**, documentfile 1.0.1 -> **1.1.0**.
+  Coroutines 1.11.0 was tried and **reverted**: it is built against Kotlin 2.2 while
+  this project compiles with Kotlin 1.9, so it does not load. Staying on 1.8.1 is
+  the correct choice until the Kotlin plugin itself is upgraded.
 
   The remaining AndroidX libraries do have newer releases, but each one now declares
   a minimum `compileSdk` of 35-37 (read from the libraries' own AAR metadata:
