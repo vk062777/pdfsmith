@@ -45,8 +45,11 @@ class CropView @JvmOverloads constructor(
     private var lastX = 0f
     private var lastY = 0f
 
-    fun reset() {
-        l = 0.08f; t = 0.08f; r = 0.92f; b = 0.92f
+    fun reset() = resetTo(0.08f, 0.08f, 0.92f, 0.92f)
+
+    /** Set the selection to a specific normalised box (e.g. a small icon area). */
+    fun resetTo(left: Float, top: Float, right: Float, bottom: Float) {
+        l = left; t = top; r = right; b = bottom
         invalidate()
     }
 

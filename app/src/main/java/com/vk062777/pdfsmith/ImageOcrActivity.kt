@@ -41,6 +41,27 @@ class ImageOcrActivity : PdfActivity() {
         binding.toolbar.setNavigationOnClickListener { finish() }
         binding.btnChoose.setOnClickListener { pickImages() }
         binding.btnRun.setOnClickListener { run() }
+        binding.btnText.setOnClickListener { saveText() }
+        pickImages()
+    }
+
+    private var recognised = ""
+
+    private val saveTextLauncher = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.CreateDocument("text/plain")
+    ) { uri ->
+        if (uri == null) return@registerForActivityResult
+        try {
+            contentResolver.openOutputStream(uri)?.use { it.write(recognised.toByteArray()) }
+            showSuccess(getString(R.string.image_ocr_saved_text), null, "text/plain")
+        } catch (t: Throwable) {
+            toast(getString(R.string.msg_failed, t.message ?: "could not save"))
+        }
+    }
+
+    private fun saveText() {
+        if (recognised.isBlank()) return toast(getString(R.string.image_ocr_run_first))
+        saveTextLauncher.launch("recognised-text.txt")
     }
 
     override fun onImagesChosen(uris: List<Uri>) {
@@ -81,7 +102,10 @@ class ImageOcrActivity : PdfActivity() {
                 }
             }
             busy.dismiss()
-            binding.textOut.text = text.toString()
+            recognised = text.toString()
+            val chars = recognised.count { !it.isWhitespace() }
+            binding.info.text = getString(R.string.image_ocr_chars, pages.size, chars)
+            binding.btnText.isEnabled = recognised.isNotBlank()
             if (pages.isEmpty()) {
                 toast(getString(R.string.image_ocr_none))
                 return@launch

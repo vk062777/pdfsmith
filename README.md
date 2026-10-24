@@ -188,6 +188,32 @@ All of this runs in CI on every build, alongside the 80 engine checks, the
 hostile-input suite, the rendered rotation/crop checks, the AES-256 check and the
 permission guard.
 
+
+## What's new in 1.8.0 — speed and link-icon fixes
+
+- **Search is now fast.** Search (and hyperlink scanning) re-parsed the whole
+  document once per page, so a 200-page file meant 200 parses. It is now a single
+  pass: searching a 200-page document takes about 1.8 seconds.
+- **OCR is faster, with no loss of accuracy.** Pages are rendered one ahead, so the
+  next page is drawn while the recogniser is still reading the current one. The
+  render resolution is unchanged, so recognition quality is unchanged.
+- **Hyperlink icons.** You can now place a *visible* link button anywhere on the
+  page and choose its colour. The link sits exactly on the button — tapping
+  elsewhere on the page does nothing. A link can never cover the page: any
+  oversized rectangle is rejected.
+- **Image OCR no longer shows the recognised text on screen**, as requested. There
+  is a new **Save recognised text (.txt)** action instead, and a short summary
+  (images, characters).
+- **Fixed:** Hyperlinks and Image-to-searchable-PDF did not open a file picker when
+  you tapped them.
+
+### Verification added
+
+- The link icon is verified by rendering: the icon must be drawn where the link is
+  (71.6% non-white against 0% on a blank part of the page), the link must be small
+  (0.32% of the page) and must carry the right address.
+- Search timing is measured on a 200-page document.
+
 ## Features
 
 | Tool | What it does |

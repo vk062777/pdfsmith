@@ -14,7 +14,9 @@ import com.vk062777.pdfsmith.databinding.ActivityOcrBinding
 import com.vk062777.pdfsmith.engine.PdfEngine
 import com.vk062777.pdfsmith.ui.PageRenderer
 import com.vk062777.pdfsmith.util.Files
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlin.coroutines.suspendCoroutine
 import kotlinx.coroutines.withContext
@@ -81,11 +83,22 @@ class OcrActivity : PdfActivity() {
         lifecycleScope.launch {
             busy.show(getString(R.string.ocr_working, 1, pages.size))
             val found = ArrayList<PdfEngine.PageText>()
+            // Render one page ahead: the next page is drawn while ML Kit is still
+            // reading the current one, which overlaps the two slowest steps. The
+            // resolution is untouched, so accuracy is unchanged.
+            var nextJob: Deferred<Bitmap?> = async(Dispatchers.IO) {
+                runCatching { r.render(pages[0] - 1, OCR_WIDTH) }.getOrNull()
+            }
             for ((i, page) in pages.withIndex()) {
                 busy.update(getString(R.string.ocr_working, i + 1, pages.size))
-                val bmp = withContext(Dispatchers.IO) {
-                    runCatching { r.render(page - 1, OCR_WIDTH) }.getOrNull()
-                } ?: continue
+                val bmp = nextJob.await()
+                if (i + 1 < pages.size) {
+                    val upcoming = pages[i + 1]
+                    nextJob = async(Dispatchers.IO) {
+                        runCatching { r.render(upcoming - 1, OCR_WIDTH) }.getOrNull()
+                    }
+                }
+                if (bmp == null) continue
                 val w = bmp.width
                 val h = bmp.height
                 val words = recognise(bmp)

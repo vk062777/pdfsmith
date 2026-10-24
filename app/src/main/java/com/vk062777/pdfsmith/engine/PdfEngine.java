@@ -1030,10 +1030,15 @@ public final class PdfEngine {
         }
     }
 
-    /** Walks the page text and keeps every glyph together with its position. */
+    /**
+     * Walks the WHOLE document once, keeping every glyph with its position and the
+     * page it belongs to. Doing this in a single pass is what makes search fast:
+     * re-parsing per page turned a 100-page search into a hundred parses.
+     */
     private static final class PositionedText extends com.tom_roush.pdfbox.text.PDFTextStripper {
         final List<String> chars = new ArrayList<>();
         final List<com.tom_roush.pdfbox.text.TextPosition> pos = new ArrayList<>();
+        final List<Integer> page = new ArrayList<>();
 
         PositionedText() throws java.io.IOException {
             super();
@@ -1044,14 +1049,17 @@ public final class PdfEngine {
         protected void writeString(String text,
                                    List<com.tom_roush.pdfbox.text.TextPosition> tps) {
             if (tps == null) return;
+            int pg = getCurrentPageNo();
             for (com.tom_roush.pdfbox.text.TextPosition tp : tps) {
                 String u = tp.getUnicode();
                 if (u == null || u.isEmpty()) continue;
                 chars.add(u);
                 pos.add(tp);
+                page.add(pg);
             }
             chars.add(" ");
             pos.add(null);          // marks a word break
+            page.add(pg);
         }
 
         String text() {
@@ -1059,15 +1067,35 @@ public final class PdfEngine {
             for (String c : chars) b.append(c);
             return b.toString();
         }
+
+        /** The page of the first real glyph at or after [from]. */
+        int pageAt(int from) {
+            for (int k = Math.max(0, from); k < pos.size(); k++) {
+                if (pos.get(k) != null) return page.get(k);
+            }
+            return -1;
+        }
     }
 
-    private static PositionedText positionedText(PDDocument d, int page1) throws Exception {
+    private static PositionedText positionedText(PDDocument d) throws Exception {
         PositionedText pt = new PositionedText();
-        pt.setStartPage(page1);
-        pt.setEndPage(page1);
         pt.setSortByPosition(true);
-        pt.getText(d);
+        pt.getText(d);          // one pass over the whole document
         return pt;
+    }
+
+    /** Crop-box size and /Rotate for every page, so results can be mapped cheaply. */
+    private static float[][] pageGeom(PDDocument d) throws Exception {
+        int n = d.getNumberOfPages();
+        float[][] g = new float[n + 1][3];
+        for (int p = 1; p <= n; p++) {
+            PDPage pg = d.getPage(p - 1);
+            PDRectangle cb = pg.getCropBox();
+            g[p][0] = cb.getWidth();
+            g[p][1] = cb.getHeight();
+            g[p][2] = ((pg.getRotation() % 360) + 360) % 360;
+        }
+        return g;
     }
 
     /** Union of the glyph boxes in [from, to) as (x, yTop, w, h) in display points. */
@@ -1109,30 +1137,26 @@ public final class PdfEngine {
         List<Match> out = new ArrayList<>();
         if (query == null || query.trim().isEmpty()) return out;
         try (PDDocument d = open(src)) {
+            PositionedText pt = positionedText(d);
+            float[][] g = pageGeom(d);
+            String text = pt.text();
+            String hay = matchCase ? text : text.toLowerCase();
             String needle = matchCase ? query : query.toLowerCase();
-            for (int p = 1; p <= d.getNumberOfPages(); p++) {
-                PDPage page = d.getPage(p - 1);
-                PDRectangle cb = page.getCropBox();
-                float cropW = cb.getWidth(), cropH = cb.getHeight();
-                int rot = ((page.getRotation() % 360) + 360) % 360;
-                PositionedText pt;
-                try { pt = positionedText(d, p); } catch (Exception e) { continue; }
-                String text = pt.text();
-                String hay = matchCase ? text : text.toLowerCase();
-                int from = 0;
-                while (true) {
-                    int i = hay.indexOf(needle, from);
-                    if (i < 0) break;
-                    float[] b = boxOf(pt, i, i + needle.length());
-                    if (b != null) {
-                        float[] db = unrotatedToDisplay(cropW, cropH, rot, b[0], b[1], b[2], b[3]);
-                        int cs = Math.max(0, i - 28);
-                        int ce = Math.min(text.length(), i + needle.length() + 28);
-                        out.add(new Match(p, db[0], db[1], db[2], db[3],
-                                text.substring(cs, ce).replace('\n', ' ').trim()));
-                    }
-                    from = i + Math.max(1, needle.length());
+            int from = 0;
+            while (true) {
+                int i = hay.indexOf(needle, from);
+                if (i < 0) break;
+                int pg = pt.pageAt(i);
+                float[] b = boxOf(pt, i, i + needle.length());
+                if (b != null && pg >= 1 && pg < g.length) {
+                    float[] db = unrotatedToDisplay(g[pg][0], g[pg][1], (int) g[pg][2],
+                            b[0], b[1], b[2], b[3]);
+                    int cs = Math.max(0, i - 28);
+                    int ce = Math.min(text.length(), i + needle.length() + 28);
+                    out.add(new Match(pg, db[0], db[1], db[2], db[3],
+                            text.substring(cs, ce).replace('\n', ' ').trim()));
                 }
+                from = i + Math.max(1, needle.length());
             }
         }
         return out;
@@ -1147,26 +1171,23 @@ public final class PdfEngine {
     public static List<FoundLink> findLinks(File src) throws Exception {
         List<FoundLink> out = new ArrayList<>();
         try (PDDocument d = open(src)) {
-            for (int p = 1; p <= d.getNumberOfPages(); p++) {
-                PDPage page = d.getPage(p - 1);
-                PDRectangle cb = page.getCropBox();
-                float cropW = cb.getWidth(), cropH = cb.getHeight();
-                int rot = ((page.getRotation() % 360) + 360) % 360;
-                PositionedText pt;
-                try { pt = positionedText(d, p); } catch (Exception e) { continue; }
-                String text = pt.text();
-                java.util.regex.Matcher m = URL_PATTERN.matcher(text);
-                while (m.find()) {
-                    String raw = m.group();
-                    // trim trailing punctuation that belongs to the sentence
-                    String url = raw.replaceAll("[.,;:!?]+$", "");
-                    if (url.length() < 4) continue;
-                    float[] b = boxOf(pt, m.start(), m.start() + url.length());
-                    if (b != null) {
-                        float[] dd = unrotatedToDisplay(cropW, cropH, rot, b[0], b[1], b[2], b[3]);
-                        out.add(new FoundLink(p, dd[0], dd[1], dd[2], dd[3], url));
-                    }
-                }
+            PositionedText pt = positionedText(d);
+            float[][] g = pageGeom(d);
+            String text = pt.text();
+            java.util.regex.Matcher m = URL_PATTERN.matcher(text);
+            while (m.find()) {
+                String raw = m.group();
+                String url = raw.replaceAll("[.,;:!?]+$", "");
+                if (url.length() < 4) continue;
+                int pg = pt.pageAt(m.start());
+                if (pg < 1 || pg >= g.length) continue;
+                float[] b = boxOf(pt, m.start(), m.start() + url.length());
+                if (b == null) continue;
+                float[] db = unrotatedToDisplay(g[pg][0], g[pg][1], (int) g[pg][2],
+                        b[0], b[1], b[2], b[3]);
+                // a link must cover its own text, never swallow the page
+                if (db[2] * db[3] > g[pg][0] * g[pg][1] * 0.25f) continue;
+                out.add(new FoundLink(pg, db[0], db[1], db[2], db[3], url));
             }
         }
         return out;
@@ -1205,6 +1226,8 @@ public final class PdfEngine {
                 PDPage page = d.getPage(l.page - 1);
                 PDRectangle crop = page.getCropBox();
                 int r = ((page.getRotation() % 360) + 360) % 360;
+                // never let a link cover a large part of the page
+                if (l.w * l.h > crop.getWidth() * crop.getHeight() * 0.25f) continue;
                 PDRectangle rect = displayBoxToPage(crop, r, l.x, l.y, l.w, l.h);
                 // a link needs a little padding to be comfortably tappable
                 rect.setLowerLeftX(rect.getLowerLeftX() - 1f);
@@ -1236,6 +1259,62 @@ public final class PdfEngine {
         if (u == null) throw new IllegalArgumentException("Not a valid link");
         FoundLink l = new FoundLink(page1, xd, yd, wd, hd, u);
         addLinks(src, java.util.Collections.singletonList(l), out);
+    }
+
+    /**
+     * Draw a VISIBLE link icon at a spot in the displayed frame and put the link
+     * exactly on the icon, so only a tap on the icon opens it.
+     */
+    public static void addLinkIcon(File src, int page1, float xd, float yd, float size,
+                                   File iconPng, String url, File out) throws Exception {
+        String u = normaliseUrl(url);
+        if (u == null) throw new IllegalArgumentException("Not a valid link");
+        try (PDDocument d = open(src)) {
+            if (page1 < 1 || page1 > d.getNumberOfPages()) {
+                throw new IllegalArgumentException("No such page");
+            }
+            PDPage page = d.getPage(page1 - 1);
+            PDRectangle crop = page.getCropBox();
+            float w = crop.getWidth(), h = crop.getHeight();
+            int r = ((page.getRotation() % 360) + 360) % 360;
+            float dw = (r == 90 || r == 270) ? h : w;
+            float dh = (r == 90 || r == 270) ? w : h;
+
+            float s = Math.max(10f, Math.min(size, Math.min(dw, dh) * 0.5f));
+            xd = Math.max(0f, Math.min(xd, dw - s));
+            yd = Math.max(0f, Math.min(yd, dh - s));
+
+            if (iconPng != null && iconPng.exists()) {
+                PDImageXObject icon = PDImageXObject.createFromFile(iconPng.getAbsolutePath(), d);
+                Matrix m;
+                switch (r) {
+                    case 90:  m = new Matrix(0, 1, -1, 0, w, 0); break;
+                    case 180: m = new Matrix(-1, 0, 0, -1, w, h); break;
+                    case 270: m = new Matrix(0, -1, 1, 0, 0, h); break;
+                    default:  m = new Matrix(1, 0, 0, 1, 0, 0); break;
+                }
+                try (PDPageContentStream cs =
+                             new PDPageContentStream(d, page, AppendMode.APPEND, true, true)) {
+                    cs.saveGraphicsState();
+                    cs.transform(m);
+                    cs.drawImage(icon, xd, dh - yd - s, s, s);
+                    cs.restoreGraphicsState();
+                }
+            }
+
+            PDRectangle rect = displayBoxToPage(crop, r, xd, yd, s, s);
+            com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationLink link =
+                    new com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDAnnotationLink();
+            link.setRectangle(rect);
+            link.setBorderStyle(new com.tom_roush.pdfbox.pdmodel.interactive.annotation.PDBorderStyleDictionary());
+            link.getBorderStyle().setWidth(0f);
+            com.tom_roush.pdfbox.pdmodel.interactive.action.PDActionURI action =
+                    new com.tom_roush.pdfbox.pdmodel.interactive.action.PDActionURI();
+            action.setURI(u);
+            link.setAction(action);
+            page.getAnnotations().add(link);
+            d.save(out);
+        }
     }
 
     /** "example.com" -> "https://example.com"; mail addresses become mailto:. */

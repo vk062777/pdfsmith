@@ -50,6 +50,72 @@ class LinksActivity : PdfActivity() {
             if (checked) applyMode(id == R.id.modeManual)
         }
         binding.modeGroup.check(R.id.modeAuto)
+        buildColourRow()
+        pickPdf()
+    }
+
+    // ---- icon colour -------------------------------------------------------
+
+    private val iconColours = intArrayOf(
+        0xFF149E8C.toInt(), 0xFF1D4ED8.toInt(), 0xFFB91C1C.toInt(),
+        0xFF111827.toInt(), 0xFFF59E0B.toInt()
+    )
+    private var chosenColour = iconColours[0]
+    private val swatches = ArrayList<android.widget.ImageView>()
+
+    private fun buildColourRow() {
+        binding.colourRow.removeAllViews()
+        swatches.clear()
+        iconColours.forEach { c ->
+            val v = android.widget.ImageView(this)
+            val size = dp(30)
+            val lp = android.widget.LinearLayout.LayoutParams(size, size)
+            lp.rightMargin = dp(10)
+            v.layoutParams = lp
+            v.setImageDrawable(swatch(c))
+            v.setOnClickListener { chosenColour = c; updateSwatches() }
+            binding.colourRow.addView(v)
+            swatches.add(v)
+        }
+        updateSwatches()
+    }
+
+    private fun updateSwatches() {
+        swatches.forEachIndexed { i, v ->
+            val on = iconColours[i] == chosenColour
+            v.background = android.graphics.drawable.GradientDrawable().apply {
+                shape = android.graphics.drawable.GradientDrawable.OVAL
+                setColor(iconColours[i])
+                setStroke(dp(if (on) 3 else 0), getColor(if (on) R.color.text_primary else R.color.divider))
+            }
+        }
+    }
+
+    private fun swatch(c: Int) = android.graphics.drawable.GradientDrawable().apply {
+        shape = android.graphics.drawable.GradientDrawable.OVAL
+        setColor(c)
+    }
+
+    /** A small rounded button with a white link glyph, in the chosen colour. */
+    private fun makeIcon(colour: Int, size: Int = 256): android.graphics.Bitmap {
+        val bmp = android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.ARGB_8888)
+        val c = android.graphics.Canvas(bmp)
+        val p = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+        p.color = colour
+        val pad = size * 0.06f
+        c.drawRoundRect(
+            android.graphics.RectF(pad, pad, size - pad, size - pad),
+            size * 0.26f, size * 0.26f, p
+        )
+        val d = androidx.appcompat.content.res.AppCompatResources.getDrawable(this, R.drawable.ic_link)
+        d?.let {
+            it.setTint(android.graphics.Color.WHITE)
+            val in0 = (size * 0.24f).toInt()
+            val in1 = (size * 0.76f).toInt()
+            it.setBounds(in0, in0, in1, in1)
+            it.draw(c)
+        }
+        return bmp
     }
 
     override fun onPdfChosen(uri: Uri) {
@@ -100,6 +166,7 @@ class LinksActivity : PdfActivity() {
             if (found.isEmpty()) getString(R.string.links_none)
             else getString(R.string.links_found, found.size)
         }
+        binding.colourRow.visibility = if (manual) android.view.View.VISIBLE else android.view.View.GONE
         if (manual) {
             if (pageCount > 0) goTo(current) else pickPdf()
         }
@@ -111,7 +178,8 @@ class LinksActivity : PdfActivity() {
         binding.pageLabel.text = "${index + 1} / $pageCount"
         binding.prevPage.isEnabled = index > 0
         binding.nextPage.isEnabled = index < pageCount - 1
-        binding.rectPick.reset()
+        // a small, icon-sized selection rather than most of the page
+        binding.rectPick.resetTo(0.10f, 0.10f, 0.20f, 0.175f)
         val r = renderer ?: return
         val targetW = (resources.displayMetrics.widthPixels * 1.7f).toInt().coerceAtMost(2400)
         lifecycleScope.launch {
@@ -137,8 +205,13 @@ class LinksActivity : PdfActivity() {
             val w = rect[2] * size[0]
             val h = rect[3] * size[1]
             if (w < 6f || h < 6f) return toast(getString(R.string.msg_area_too_small))
+            val side = minOf(w, h)
+            val icon = Files.newFile(this, "link_icon.png")
+            java.io.FileOutputStream(icon).use {
+                makeIcon(chosenColour).compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)
+            }
             runAndSave(Files.suggestName(sourceName, "_links")) { out ->
-                PdfEngine.addLink(src, current + 1, x, y, w, h, url, out)
+                PdfEngine.addLinkIcon(src, current + 1, x, y, side, icon, url, out)
             }
             return
         }

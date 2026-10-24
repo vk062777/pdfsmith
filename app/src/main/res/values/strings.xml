@@ -251,4 +251,8 @@
     <string name="search_none">No matches</string>
     <string name="search_progress">Searching\u2026</string>
     <string name="search_count">%1$d / %2$d</string>
+    <string name="image_ocr_save_text">Save recognised text (.txt)</string>
+    <string name="image_ocr_chars">%1$d image(s) \u2022 %2$d characters recognised</string>
+    <string name="image_ocr_saved_text">Recognised text saved</string>
+    <string name="image_ocr_run_first">Run the recognition first</string>
 </resources>

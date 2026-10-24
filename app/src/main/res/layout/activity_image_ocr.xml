@@ -79,23 +79,6 @@
         android:textColor="@color/text_secondary"
         android:textSize="13sp" />
 
-    <ScrollView
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:layout_marginTop="8dp"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp">
-
-        <TextView
-            android:id="@+id/textOut"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:fontFamily="monospace"
-            android:textColor="@color/text_primary"
-            android:textIsSelectable="true"
-            android:textSize="13sp" />
-    </ScrollView>
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnRun"
@@ -104,8 +87,19 @@
         android:layout_marginStart="16dp"
         android:layout_marginTop="8dp"
         android:layout_marginEnd="16dp"
-        android:layout_marginBottom="16dp"
         android:enabled="false"
         android:text="@string/image_ocr_save" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnText"
+        style="@style/Widget.Material3.Button.OutlinedButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="16dp"
+        android:enabled="false"
+        android:text="@string/image_ocr_save_text" />
 
 </LinearLayout>
