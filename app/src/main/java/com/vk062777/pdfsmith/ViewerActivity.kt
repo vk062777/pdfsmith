@@ -6,9 +6,8 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.ParcelFileDescriptor
 import android.view.Menu
+import android.view.MenuItem
 import android.view.inputmethod.EditorInfo
-import android.view.Menu
-import android.view.inputmethod.EditorInfoItem
 import androidx.lifecycle.lifecycleScope
 import androidx.viewpager2.widget.ViewPager2
 import com.vk062777.pdfsmith.databinding.ActivityViewerBinding

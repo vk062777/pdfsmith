@@ -554,5 +554,4 @@ class ToolsActivity : PdfActivity() {
         return super.onOptionsItemSelected(item)
     }
 
-    private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
 }
